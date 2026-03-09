@@ -10,9 +10,8 @@ Implements a two-tier routing strategy:
 
 from __future__ import annotations
 
-from utils.logging_helpers import get_logger, log_debug_event, log_info_event
-
 from orchestrator.registry import AgentRegistration, AgentRegistry
+from utils.logging_helpers import get_logger, log_debug_event, log_info_event
 
 logger = get_logger(__name__)
 

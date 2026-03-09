@@ -10,25 +10,24 @@ import asyncio
 import hashlib
 import json
 import logging
-import uuid
 from collections.abc import Callable
 from typing import Any, Protocol, TypeVar, cast
 
 from ag_ui.core import EventType, RunErrorEvent
 from fastapi import Request
 
-from utils.logging_helpers import (
-    get_logger,
-    log_error_event,
-    log_info_event,
-    log_warning_event,
-)
 from server.constants import (
     DEFAULT_MAX_RETRIES,
     DEFAULT_RETRY_INITIAL_DELAY,
     DEFAULT_RETRY_MAX_DELAY_SHORT,
 )
 from server.types import AGUIEvent
+from utils.logging_helpers import (
+    get_logger,
+    log_error_event,
+    log_info_event,
+    log_warning_event,
+)
 
 logger = get_logger(__name__)
 
@@ -115,128 +114,6 @@ def create_error_event(message: str, code: str) -> RunErrorEvent:
         message=message,
         code=code,
     )
-
-
-def get_tool_call_id(tool_data: dict, generate_default: bool = False) -> str | None:
-    """Extract tool call ID from dictionary, handling both naming conventions.
-
-    Handles cases where tool data dictionaries may use either 'toolUseId' or 'tool_use_id'
-    as the key name, providing a consistent way to extract the tool call ID regardless
-    of naming convention.
-
-    Args:
-        tool_data: Dictionary containing tool call data
-        generate_default: If True and no ID is found, generate a UUID. If False, return None.
-
-    Returns:
-        The tool call ID as a string, or None if not found and generate_default is False,
-        or a generated UUID string if not found and generate_default is True
-
-    Example:
-        ```python
-        # With camelCase key
-        tool_data = {"toolUseId": "call-123"}
-        tool_id = get_tool_call_id(tool_data)  # Returns "call-123"
-
-        # With snake_case key
-        tool_data = {"tool_use_id": "call-456"}
-        tool_id = get_tool_call_id(tool_data)  # Returns "call-456"
-
-        # Missing ID, generate default
-        tool_data = {}
-        tool_id = get_tool_call_id(tool_data, generate_default=True)  # Returns UUID string
-        ```
-
-    """
-    # Use explicit None check to avoid falling back when first key exists but is falsy (e.g., empty string)
-    tool_id = tool_data.get("toolUseId")
-    if tool_id is None:
-        tool_id = tool_data.get("tool_use_id")
-    if tool_id:
-        # Cast to str since we've verified it's truthy (non-empty string)
-        return str(tool_id)
-    if generate_default:
-        return str(uuid.uuid4())
-    return None
-
-
-def validate_state_snapshot(state: dict) -> tuple[dict, list[str]]:
-    """Validate and sanitize state snapshot dictionary.
-
-    Ensures state snapshot values are JSON-serializable and filters out
-    problematic values that could cause issues downstream. Applies
-    security-oriented sanitization (control chars, depth/size limits, key
-    validation) before JSON-serializability checks. Logs warnings for
-    any filtered values.
-
-    Args:
-        state: State snapshot dictionary to validate
-
-    Returns:
-        Tuple of (sanitized_state: dict, warnings: list[str])
-        - sanitized_state: State dict with only JSON-serializable, sanitized values
-        - warnings: List of warning messages for filtered values
-
-    Example:
-        ```python
-        state = {
-            "key1": "value1",
-            "key2": 123,
-            "key3": {"nested": "data"},
-            "key4": lambda x: x,  # Non-serializable
-        }
-        sanitized, warnings = validate_state_snapshot(state)
-        # sanitized = {"key1": "value1", "key2": 123, "key3": {"nested": "data"}}
-        # warnings = ["Non-serializable value for key 'key4' (type: function) filtered..."]
-        ```
-
-    """
-    from server.sanitization import sanitize_for_state_snapshot, sanitize_key
-
-    # Security sanitization: control chars, depth/size limits, key validation
-    sanitized_by_security = sanitize_for_state_snapshot(state)
-
-    sanitized_state = {}
-    warnings = []
-
-    for key in state:
-        if key not in sanitized_by_security:
-            # Key was dropped by sanitization: bad key or non-serializable value
-            if not isinstance(key, str):
-                warnings.append(
-                    f"Non-string key '{key}' (type: {type(key).__name__}) filtered from state snapshot"
-                )
-            elif sanitize_key(key) is None:
-                warnings.append(
-                    f"Invalid key '{key}' (invalid characters or length) filtered from state snapshot"
-                )
-            else:
-                try:
-                    json.dumps(state[key])
-                except (TypeError, ValueError) as e:
-                    warnings.append(
-                        f"Non-serializable value for key '{key}' (type: {type(state[key]).__name__}) filtered from state snapshot: {str(e)}"
-                    )
-            continue
-
-        value = sanitized_by_security[key]
-        # Ensure key is a string (sanity; keys from sanitization are always str)
-        if not isinstance(key, str):
-            warnings.append(
-                f"Non-string key '{key}' (type: {type(key).__name__}) filtered from state snapshot"
-            )
-            continue
-
-        # Check if value is JSON-serializable
-        try:
-            json.dumps(value)  # Test if value can be serialized
-            sanitized_state[key] = value
-        except (TypeError, ValueError) as e:
-            warnings.append(
-                f"Non-serializable value for key '{key}' (type: {type(value).__name__}) filtered from state snapshot: {str(e)}"
-            )
-
-    return sanitized_state, warnings
 
 
 def get_event_type_name(event_type: EventType) -> str:
@@ -791,158 +668,3 @@ def parse_json_with_fallback(
             return fallback_value if fallback_value is not None else text_content
 
 
-def format_result_content(result: Any) -> str:
-    """Format tool result content for ToolCallResultEvent.
-
-    Converts tool result data to a JSON string for use in ToolCallResultEvent.content.
-    This function centralizes the formatting logic to reduce code duplication.
-
-    Args:
-        result: Tool result data (can be dict, list, str, or any other type)
-
-    Returns:
-        JSON string if result is dict or list, otherwise string representation
-
-    Example:
-        format_result_content({"status": "success"})  # Returns: '{"status": "success"}'
-        format_result_content([1, 2, 3])  # Returns: '[1, 2, 3]'
-        format_result_content("plain text")  # Returns: 'plain text'
-        format_result_content(42)  # Returns: '42'
-
-    """
-    if isinstance(result, (dict, list)):
-        return json.dumps(result)
-    return str(result)
-
-
-def format_error_context(**kwargs: Any) -> str:
-    """Format error context dictionary into a standardized string.
-
-    Creates a consistent format for error context strings used in logging.
-    Filters out None values and formats key-value pairs.
-
-    Args:
-        **kwargs: Key-value pairs to include in the context string
-
-    Returns:
-        Formatted context string (e.g., "tool_name=test, tool_call_id=123, error=ValueError")
-
-    Example:
-        context = format_error_context(
-            tool_name="test_tool",
-            tool_call_id="123",
-            error="ValueError"
-        )
-        # Returns: "tool_name=test_tool, tool_call_id=123, error=ValueError"
-
-    """
-    # Filter out None values and format as key=value pairs
-    context_parts = [f"{k}={v}" for k, v in kwargs.items() if v is not None]
-    return ", ".join(context_parts)
-
-
-def log_hook_error_if_not_silent(
-    silent: bool,
-    hook_name: str,
-    error_event_name: str,
-    error: Exception,
-    **error_context: Any,
-) -> None:
-    """Log hook error if not in silent mode.
-
-    Provides a standardized way to handle errors in hook functions, respecting
-    the `silent_hook_errors` configuration. Errors are logged as warnings unless
-    silent mode is enabled.
-
-    **Usage Pattern:**
-    ```python
-    try:
-        result = await hook_function(context)
-    except Exception as e:
-        log_hook_error_if_not_silent(
-            silent=config.silent_hook_errors,
-            hook_name="state_from_result",
-            error_event_name="ag_ui.state_from_result_hook_error",
-            error=e,
-            tool_name=tool_name,
-            tool_call_id=tool_call_id,
-        )
-    ```
-
-    Args:
-        silent: If True, suppress error logging. If False, log warnings.
-        hook_name: Name of the hook for error messages (e.g., "state_from_result")
-        error_event_name: Event name for logging (e.g., "ag_ui.state_from_result_hook_error")
-        error: The exception that occurred
-        **error_context: Additional context fields for error logging
-
-    Example:
-        try:
-            async for chunk in streamer(context):
-                yield chunk
-        except Exception as e:
-            log_hook_error_if_not_silent(
-                silent=config.silent_hook_errors,
-                hook_name="args_streamer",
-                error_event_name="ag_ui.args_streamer_error",
-                error=e,
-                tool_name="test_tool",
-                tool_call_id="123",
-            )
-
-    """
-    if not silent:
-        context_str = format_error_context(**error_context, error=str(error))
-        log_warning_event(
-            logger,
-            f"Error in {hook_name} hook: {context_str}",
-            error_event_name,
-            exc_info=True,
-            hook_name=hook_name,
-            **error_context,
-            error=str(error),
-        )
-
-
-def handle_operation_error(
-    operation_name: str,
-    error_event_name: str,
-    error: Exception,
-    **error_context: Any,
-) -> None:
-    """Log an operation error with standardized formatting.
-
-    Centralizes error logging for operations that don't use decorators or
-    context managers. Ensures consistent error message formatting across
-    the codebase.
-
-    Args:
-        operation_name: Name of the operation (e.g., "emit MessagesSnapshotEvent")
-        error_event_name: Event name for logging (e.g., "ag_ui.messages_snapshot_emit_failed")
-        error: The exception that occurred
-        **error_context: Additional context fields for error logging
-
-    Example:
-        try:
-            result = some_operation()
-        except Exception as e:
-            handle_operation_error(
-                operation_name="emit MessagesSnapshotEvent",
-                error_event_name="ag_ui.messages_snapshot_emit_failed",
-                error=e,
-                tool_call_id=tool_call_id,
-                tool_name=tool_name,
-            )
-            return None
-
-    """
-    context_str = format_error_context(**error_context, error=str(error))
-    log_warning_event(
-        logger,
-        f"Failed to {operation_name}: {context_str}",
-        error_event_name,
-        exc_info=True,
-        operation_name=operation_name,
-        **error_context,
-        error=str(error),
-    )

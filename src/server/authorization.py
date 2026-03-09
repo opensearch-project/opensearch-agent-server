@@ -73,7 +73,6 @@ if TYPE_CHECKING:
 
 from fastapi import Request
 
-from utils.logging_helpers import get_logger
 from server.exceptions import (
     ForbiddenError,
     NotFoundError,
@@ -82,6 +81,7 @@ from server.exceptions import (
 )
 from server.types import PersistenceProtocol
 from server.utils import get_user_id_from_request, is_authenticated, log_security_event
+from utils.logging_helpers import get_logger
 
 logger = get_logger(__name__)
 

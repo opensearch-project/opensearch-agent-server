@@ -47,12 +47,12 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, TypeVar
 
+from server.exceptions import NotFoundError, PersistenceNotEnabledError
 from utils.logging_helpers import (
     get_logger,
     log_error_event,
     log_warning_event,
 )
-from server.exceptions import NotFoundError, PersistenceNotEnabledError
 
 logger = get_logger(__name__)
 

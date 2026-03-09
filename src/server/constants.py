@@ -238,13 +238,6 @@ DEFAULT_MIME_TYPE: str = "application/octet-stream"
 DEFAULT_USER_MESSAGE: str = "Hello"
 """Default message text used when no user message content is available."""
 
-# Default agent cache size
-DEFAULT_AGENT_CACHE_SIZE: int = 100
-"""Default maximum number of agents to cache per thread (0 disables caching).
-
-Used in ServerConfig.agent_cache_size.
-"""
-
 # Message role constants
 ROLE_USER: str = "user"
 """Role constant for user messages in the AG-UI protocol."""

@@ -48,12 +48,6 @@ from typing import TYPE_CHECKING
 
 from ag_ui.core import EventType, RunFinishedEvent
 
-from utils.logging_helpers import (
-    get_logger,
-    log_error_event,
-    log_info_event,
-    log_warning_event,  # noqa: F401 (used in event-dropped path)
-)
 from server.config import get_config
 from server.constants import (
     DEFAULT_EVENT_STREAM_CHECK_TIMEOUT,
@@ -64,6 +58,12 @@ from server.constants import (
 from server.run_manager import get_run_manager
 from server.types import EventEncoderProtocol
 from server.utils import create_error_event
+from utils.logging_helpers import (
+    get_logger,
+    log_error_event,
+    log_info_event,
+    log_warning_event,  # noqa: F401 (used in event-dropped path)
+)
 
 if TYPE_CHECKING:
     from server.run_manager import RunManager
@@ -133,7 +133,7 @@ async def put_event_with_backpressure(
     try:
         await asyncio.wait_for(event_queue.put(event), timeout=timeout)
         return True
-    except asyncio.TimeoutError:
+    except TimeoutError:
         # Queue is full and timeout exceeded - log error (event is lost)
         queue_size = event_queue.qsize()
         log_error_event(
@@ -222,7 +222,7 @@ async def put_critical_event_with_retry(
                     attempts=attempt + 1,
                 )
             return True
-        except asyncio.TimeoutError:
+        except TimeoutError:
             queue_size = event_queue.qsize()
 
             if attempt < max_retries:
@@ -477,7 +477,7 @@ async def yield_events_from_queue(
                 )
                 consecutive_timeouts = 0  # Reset timeout counter on successful event
                 yield event
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 consecutive_timeouts += 1
                 # Check if generator is done and queue is empty
                 if generator_task.done() and event_queue.empty():

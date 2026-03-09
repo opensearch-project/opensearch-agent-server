@@ -25,9 +25,9 @@ from slowapi import (  # type: ignore[import-untyped]
 from slowapi.errors import RateLimitExceeded  # type: ignore[import-untyped]
 from slowapi.util import get_remote_address  # type: ignore[import-untyped]
 
-from utils.logging_helpers import get_logger, log_info_event
 from server.config import ServerConfig, get_config
 from server.utils import get_user_id_from_request
+from utils.logging_helpers import get_logger, log_info_event
 
 F = TypeVar("F", bound=Callable[..., Any])
 

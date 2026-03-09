@@ -2,8 +2,8 @@
 
 Exposes the multi-agent system via AG-UI protocol for frontend integration.
 create_app() builds the FastAPI app; the lifespan context manager handles
-startup (config validation, persistence, Phoenix, rate limiting, StrandsAgent)
-and shutdown (agent thread cleanup).
+startup (config validation, persistence, rate limiting, AgentOrchestrator)
+and shutdown (orchestrator cleanup).
 """
 
 from __future__ import annotations
@@ -19,13 +19,6 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from utils.logging_helpers import (
-    get_logger,
-    log_debug_event,
-    log_error_event,
-    log_info_event,
-    log_warning_event,
-)
 from server.constants import (
     DEFAULT_EVENT_LIMIT,
 )
@@ -36,6 +29,13 @@ from server.types import (
     RunResponse,
 )
 from server.validators import ValidatedRunAgentInput
+from utils.logging_helpers import (
+    get_logger,
+    log_debug_event,
+    log_error_event,
+    log_info_event,
+    log_warning_event,
+)
 
 # Configure logging (will be configured by ag_ui_server.py or can be configured here)
 # If not already configured, use default human-readable format
@@ -53,6 +53,7 @@ logger = get_logger(__name__)
 # Imports below run after logging config so that:
 # - Phoenix and route modules see configured logging if we configured it here.
 # - No need to reorder if new modules depend on config or logging.
+from server.agent_orchestrator import AgentOrchestrator  # noqa: E402
 from server.auth_middleware import (  # noqa: E402
     AuthenticationMiddleware,
     create_auth_middleware,
@@ -70,11 +71,10 @@ from server.run_routes import (  # noqa: E402
     get_run_events_route,
     get_run_route,
 )
-from server.strands_agent import StrandsAgent  # noqa: E402
 
 # Set by lifespan at startup; used by routes at request time.
 persistence: Any | None = None
-strands_agent: StrandsAgent | None = None
+orchestrator: AgentOrchestrator | None = None
 
 
 def _suppress_mcp_cancel_scope_error(
@@ -104,9 +104,6 @@ def _suppress_mcp_cancel_scope_error(
             return
 
     # For all other exceptions, log them using the standard event helper
-    # This mimics asyncio's default exception handler behavior.
-    # Use exc_info tuple so the logged traceback matches the exception from context
-    # (sys.exc_info() is not reliable in asyncio exception handler callbacks).
     message = context.get("message", "Unhandled exception in event loop")
     if exception:
         exc_info_tuple = (
@@ -135,22 +132,12 @@ def _suppress_mcp_cancel_scope_error(
 def _register_mcp_cancel_scope_exception_handler(
     loop: asyncio.AbstractEventLoop,
 ) -> None:
-    """Register the MCP cancel-scope exception handler on the event loop.
-
-    Called by the create_app() lifespan at startup. Suppresses harmless
-    RuntimeErrors from MCP stdio_client cleanup; other exceptions are logged.
-
-    Args:
-        loop: The asyncio event loop to register the handler on.
-    """
+    """Register the MCP cancel-scope exception handler on the event loop."""
     loop.set_exception_handler(_suppress_mcp_cancel_scope_error)
 
 
 def _noop_rate_limit(f: Any) -> Any:
-    """Placeholder no-op so route handlers can use @rate_limit before the app exists.
-
-    create_app() overwrites the module-level rate_limit with the real decorator.
-    """
+    """Placeholder no-op so route handlers can use @rate_limit before the app exists."""
     return f
 
 
@@ -158,11 +145,7 @@ rate_limit: Any = _noop_rate_limit
 
 
 class _MaxBodySizeMiddleware:
-    """ASGI middleware that returns 413 when Content-Length exceeds max_bytes.
-
-    When max_bytes is 0, the check is disabled. Only checks when Content-Length
-    is present; chunked or missing Content-Length bypass the check.
-    """
+    """ASGI middleware that returns 413 when Content-Length exceeds max_bytes."""
 
     def __init__(self, app: Any, max_bytes: int = 0) -> None:
         self.app = app
@@ -216,10 +199,6 @@ class _MaxBodySizeMiddleware:
 def create_app(config_override: ServerConfig | None = None) -> FastAPI:
     """Create and configure the FastAPI application.
 
-    Config is resolved at call time (not import time), so tests can pass an
-    alternative config without using reset_config. When config_override is None,
-    get_config() is used.
-
     Args:
         config_override: Optional ServerConfig. When None, uses get_config().
 
@@ -232,22 +211,15 @@ def create_app(config_override: ServerConfig | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> Any:
-        """FastAPI lifespan: startup then yield, then shutdown.
-
-        Startup: register MCP exception handler, validate config, init
-        persistence (if enabled), Phoenix, rate limiting, and StrandsAgent.
-        Sets module-level persistence and strands_agent for use by routes.
-        Shutdown: cleanup cached agent threads and log result.
-        """
+        """FastAPI lifespan: startup then yield, then shutdown."""
         loop = asyncio.get_running_loop()
         _register_mcp_cancel_scope_exception_handler(loop)
 
-        # Validate configuration before proceeding with initialization
         from server.config import validate_config_on_startup
 
         validate_config_on_startup(config_resolved)
 
-        global persistence, strands_agent
+        global persistence, orchestrator
         persistence = None
         if config_resolved.enable_persistence:
             try:
@@ -281,11 +253,11 @@ def create_app(config_override: ServerConfig | None = None) -> FastAPI:
 
         setup_rate_limiting(app, rate_limiter)
 
-        # --- Orchestrator setup ---
+        # --- Orchestrator setup: create agents eagerly ---
+        from agents.art_agent import create_art_agent
+        from agents.fallback_agent import create_fallback_agent
         from orchestrator.registry import AgentRegistration, AgentRegistry
         from orchestrator.router import PageContextRouter
-        from agents.fallback_agent import create_fallback_agent
-        from agents.art_agent import create_art_agent
 
         registry = AgentRegistry()
         opensearch_url = config_resolved.opensearch_url
@@ -295,7 +267,6 @@ def create_app(config_override: ServerConfig | None = None) -> FastAPI:
             name="art",
             description="Search Relevance Testing agent (ART) — hypothesis generation, "
             "evaluation, UBI analysis, and online A/B testing",
-            factory=create_art_agent,
             page_contexts=["search-relevance", "searchRelevance"],
             is_fallback=False,
         ))
@@ -304,7 +275,6 @@ def create_app(config_override: ServerConfig | None = None) -> FastAPI:
         registry.register(AgentRegistration(
             name="fallback",
             description="General OpenSearch assistant with MCP tools",
-            factory=create_fallback_agent,
             page_contexts=[],
             is_fallback=True,
         ))
@@ -322,47 +292,58 @@ def create_app(config_override: ServerConfig | None = None) -> FastAPI:
 
         router = PageContextRouter(registry)
 
-        # Agent cache: keyed by agent name (one instance per sub-agent type)
-        _agent_cache: dict[str, object] = {}
+        # Create orchestrator and eagerly initialize agents
+        orchestrator = AgentOrchestrator(router)
 
-        async def create_agent_for_request(page_context: str | None = None) -> object:
-            """Orchestrator factory: route by page_context, create/cache agent."""
-            registration = router.route(page_context)
-            if registration.name not in _agent_cache:
-                _agent_cache[registration.name] = await registration.factory(opensearch_url)
-                log_info_event(
-                    logger,
-                    f"Created agent '{registration.name}' for page_context='{page_context}'",
-                    "ag_ui.agent_created",
-                    agent_name=registration.name,
-                    page_context=page_context,
-                )
-            return _agent_cache[registration.name]
-
-        strands_agent = StrandsAgent(
-            agent_factory=create_agent_for_request,
-            name="opensearch-agent-server",
-            description="Multi-agent orchestrator for OpenSearch Dashboards",
-            cache_max_size=config_resolved.agent_cache_size,
-        )
-
-        yield
+        # Create fallback agent eagerly
         try:
-            thread_count = await strands_agent.cleanup_all_threads()
+            fallback_agent = await asyncio.to_thread(
+                create_fallback_agent, opensearch_url
+            )
+            orchestrator.register_agent(
+                name="fallback",
+                strands_agent=fallback_agent,
+                description="General OpenSearch assistant with MCP tools",
+            )
             log_info_event(
                 logger,
-                f"Server shutdown: cleaned up {thread_count} cached agent(s)",
-                "ag_ui.server_shutdown_cleanup",
-                thread_count=thread_count,
+                "✓ Fallback agent created and registered",
+                "ag_ui.fallback_agent_ready",
             )
         except Exception as e:
             log_error_event(
                 logger,
-                f"✗ Error during server shutdown cleanup: {e}",
-                "ag_ui.server_shutdown_cleanup_error",
-                exc_info=True,
+                f"✗ Failed to create fallback agent: {e}",
+                "ag_ui.fallback_agent_creation_failed",
                 error=str(e),
+                exc_info=True,
             )
+
+        # Create ART agent eagerly
+        try:
+            art_agent = await asyncio.to_thread(
+                create_art_agent, opensearch_url
+            )
+            orchestrator.register_agent(
+                name="art",
+                strands_agent=art_agent,
+                description="Search Relevance Testing agent (ART)",
+            )
+            log_info_event(
+                logger,
+                "✓ ART agent created and registered",
+                "ag_ui.art_agent_ready",
+            )
+        except Exception as e:
+            log_warning_event(
+                logger,
+                f"✗ ART agent not available (os_art not installed?): {e}",
+                "ag_ui.art_agent_creation_failed",
+                error=str(e),
+                exc_info=True,
+            )
+
+        yield
 
     app = FastAPI(
         title="OpenSearch Agent Server for OpenSearch Dashboards",
@@ -442,43 +423,27 @@ def create_app(config_override: ServerConfig | None = None) -> FastAPI:
 app = create_app()
 
 
-def get_strands_agent() -> StrandsAgent:
-    """Dependency function to provide StrandsAgent instance.
-
-    This enables dependency injection for better testability and flexibility.
-    The function returns the module-level strands_agent instance, which can be
-    overridden in tests by patching this dependency function.
+def get_orchestrator() -> AgentOrchestrator:
+    """Dependency function to provide AgentOrchestrator instance.
 
     Returns:
-        StrandsAgent instance configured for the application
+        AgentOrchestrator instance configured for the application.
 
     Raises:
-        RuntimeError: If called before app lifespan has run (strands_agent is None).
-
+        RuntimeError: If called before app lifespan has run.
     """
-    if strands_agent is None:
+    if orchestrator is None:
         raise RuntimeError(
-            "StrandsAgent not initialized. Ensure app lifespan has run (e.g. use "
+            "AgentOrchestrator not initialized. Ensure app lifespan has run (e.g. use "
             "TestClient with lifespan context or start the server)."
         )
-    return strands_agent
+    return orchestrator
 
 
 # Exception handlers for consistent error responses
-# `@app.exception_handler(APIError)` decorator registers exception handler
-# FastAPI calls this function when APIError exception is raised
 @app.exception_handler(APIError)
 async def api_error_handler(request: Request, exc: APIError) -> JSONResponse:
-    """Handle API errors with consistent response format.
-
-    Args:
-        request: FastAPI request object
-        exc: APIError exception instance
-
-    Returns:
-        JSONResponse with error details
-
-    """
+    """Handle API errors with consistent response format."""
     log_error_event(
         logger,
         f"✗ API error: code={exc.code}, message={exc.message}, path={request.url.path}",
@@ -489,8 +454,6 @@ async def api_error_handler(request: Request, exc: APIError) -> JSONResponse:
         status_code=exc.status_code,
         path=request.url.path,
     )
-    # Build response with error, code, and detail (stable keys for frontend handling).
-    # "detail" is included for conventional 4xx/5xx JSON; "error" is the message.
     response_content = {
         "error": exc.message,
         "code": exc.code,
@@ -506,20 +469,7 @@ async def api_error_handler(request: Request, exc: APIError) -> JSONResponse:
 async def request_validation_exception_handler(
     request: Request, exc: RequestValidationError
 ) -> JSONResponse:
-    """Handle request validation errors (422) with a sanitized detail.
-
-    Returns 422 with a detail that includes only loc, msg, and type for each
-    error. Omits ctx, input, and other keys that might contain stack traces,
-    internal paths, or other sensitive implementation details.
-
-    Args:
-        request: FastAPI request object
-        exc: RequestValidationError from Pydantic/FastAPI validation
-
-    Returns:
-        JSONResponse with status 422 and sanitized detail list
-    """
-    # Keep only loc, msg, type per error to avoid leaking stack traces or paths
+    """Handle request validation errors (422) with a sanitized detail."""
     sanitized = [
         {k: v for k, v in e.items() if k in ("loc", "msg", "type")}
         for e in exc.errors()
@@ -529,19 +479,7 @@ async def request_validation_exception_handler(
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
-    """Handle FastAPI HTTPException with proper status code.
-
-    This handler ensures HTTPException (like 401 Authentication required)
-    are returned with their proper status codes instead of being caught
-    by the general exception handler and converted to 500 errors.
-
-    Args:
-        request: FastAPI request object
-        exc: HTTPException instance
-
-    Returns:
-        JSONResponse with the exception's status code and detail
-    """
+    """Handle FastAPI HTTPException with proper status code."""
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail": exc.detail},
@@ -550,24 +488,7 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    """Handle unexpected exceptions with consistent error response.
-
-    Note: HTTPException is handled by http_exception_handler above. FastAPI
-    should match HTTPException to the more specific handler first, but this
-    check ensures HTTPException is properly handled if the handler order
-    is incorrect.
-
-    Args:
-        request: FastAPI request object
-        exc: Exception instance
-
-    Returns:
-        JSONResponse with error details (401 for HTTPException, 500 for others)
-
-    """
-    # Handle HTTPException - delegate to the specific handler logic
-    # This ensures HTTPException gets proper status codes even if handler
-    # registration order is wrong
+    """Handle unexpected exceptions with consistent error response."""
     if isinstance(exc, HTTPException):
         return JSONResponse(
             status_code=exc.status_code,
@@ -593,21 +514,13 @@ async def general_exception_handler(request: Request, exc: Exception) -> JSONRes
 
 @app.get("/health", tags=["health"])
 async def health() -> dict[str, str]:
-    """Health check endpoint.
-
-    Returns:
-        Status object indicating server health
-    """
+    """Health check endpoint."""
     return {"status": "ok"}
 
 
 @app.get("/agents", tags=["agents"])
 async def list_agents(request: Request) -> dict:
-    """List registered agents and their page contexts.
-
-    Returns:
-        Dictionary with list of registered agents.
-    """
+    """List registered agents and their page contexts."""
     registry = request.app.state.registry
     return {
         "agents": [
@@ -622,34 +535,16 @@ async def list_agents(request: Request) -> dict:
     }
 
 
-# `@app.post("/runs")` decorator registers HTTP POST endpoint
-# FastAPI automatically parses and validates request body as ValidatedRunAgentInput (Pydantic model)
 @app.post("/runs", tags=["runs"])
 @rate_limit
 async def create_run(
     input_data: ValidatedRunAgentInput,
     request: Request,
-    strands_agent: StrandsAgent = Depends(get_strands_agent),
+    orch: AgentOrchestrator = Depends(get_orchestrator),
 ) -> StreamingResponse:
-    """Start a new agent run and stream AG-UI events via SSE.
-
-    Follows the official AG-UI Strands integration pattern.
-
-    Files should be included in the RunAgentInput messages as BinaryInputContent
-    with base64-encoded data in the JSON payload, not as multipart/form-data.
-
-    Args:
-        input_data: ValidatedRunAgentInput with thread_id, run_id, and messages
-                   (files should be in messages as BinaryInputContent with base64 data)
-        request: FastAPI request object (for Accept header)
-        strands_agent: StrandsAgent instance injected via dependency injection
-
-    Returns:
-        SSE stream of AG-UI events
-
-    """
+    """Start a new agent run and stream AG-UI events via SSE."""
     return create_run_route(
-        strands_agent=strands_agent,
+        orchestrator=orch,
         persistence=persistence,
         input_data=input_data,
         request=request,
@@ -658,16 +553,7 @@ async def create_run(
 
 @app.get("/runs/{run_id}", tags=["runs"])
 async def get_run(run_id: str, request: Request) -> RunResponse:
-    """Get run details including status and metadata.
-
-    Args:
-        run_id: Run identifier
-        request: FastAPI request object (for access control)
-
-    Returns:
-        Run information including status, timestamps, and metadata
-
-    """
+    """Get run details including status and metadata."""
     return get_run_route(persistence=persistence, run_id=run_id, request=request)
 
 
@@ -679,19 +565,7 @@ async def get_run_events(
     limit: int = DEFAULT_EVENT_LIMIT,
     offset: int = 0,
 ) -> RunEventsResponse:
-    """Get events for a run, optionally filtered by event_type.
-
-    Args:
-        run_id: Run identifier
-        request: FastAPI request object (for access control)
-        event_type: Optional event type to filter by (e.g., TEXT_MESSAGE_START)
-        limit: Maximum number of events to return (default: DEFAULT_EVENT_LIMIT)
-        offset: Offset for pagination (default: 0)
-
-    Returns:
-        List of event dictionaries
-
-    """
+    """Get events for a run, optionally filtered by event_type."""
     return get_run_events_route(
         persistence=persistence,
         run_id=run_id,
@@ -704,16 +578,7 @@ async def get_run_events(
 
 @app.post("/runs/{run_id}/cancel", tags=["runs"])
 async def cancel_run(run_id: str, request: Request) -> CancelRunResponse:
-    """Cancel a running agent.
-
-    Args:
-        run_id: Run identifier
-        request: FastAPI request object (for access control)
-
-    Returns:
-        Cancellation confirmation
-
-    """
+    """Cancel a running agent."""
     return await cancel_run_route(
         persistence=persistence, run_id=run_id, request=request
     )

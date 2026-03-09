@@ -57,14 +57,14 @@ from enum import Enum
 from typing import TypedDict
 
 import jwt
-from fastapi import HTTPException, Request, status
+from fastapi import Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse, Response
 from starlette.types import ASGIApp
 
-from utils.logging_helpers import get_logger, log_info_event, log_warning_event
 from server.config import ServerConfig, get_config
 from server.utils import get_user_id_from_request
+from utils.logging_helpers import get_logger, log_info_event, log_warning_event
 
 logger = get_logger(__name__)
 

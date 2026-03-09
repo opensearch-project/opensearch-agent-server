@@ -1,6 +1,0 @@
-# OpenSearch MCP Server Configuration
-# For the opensearch-agent-server fallback agent, enable all tools.
-# Sub-agents can use their own filtered configs if needed.
-tool_filters:
-  enabled_tools: []
-  disabled_tools: []

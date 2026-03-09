@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "OpenSearch Agent Server for OpenSearch Dashboards — multi-agent orchestrator with page-context routing"
 readme = "README.md"
 license = "Apache-2.0"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "opensearch-py",
     "mcp",
@@ -26,6 +26,7 @@ dependencies = [
     "PyJWT>=2.8.0",
     "sqlalchemy>=2.0.0",
     "aiosqlite",
+    "ag-ui-strands>=0.1.1",
 ]
 
 [project.optional-dependencies]
@@ -43,7 +44,7 @@ dev = [
 [tool.ruff]
 line-length = 88
 indent-width = 4
-target-version = "py310"
+target-version = "py312"
 
 [tool.ruff.format]
 quote-style = "double"

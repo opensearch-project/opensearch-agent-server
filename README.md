@@ -39,7 +39,7 @@ OpenSearch Dashboards (AG-UI)
 
 ## Prerequisites
 
-- **Python 3.10+**
+- **Python 3.12+**
 - **OpenSearch 2.x** (local or remote cluster)
 - **LLM Provider** (choose one):
   - AWS Bedrock (requires AWS credentials)

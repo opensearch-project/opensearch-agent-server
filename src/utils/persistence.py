@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import (
@@ -208,7 +208,7 @@ class AGUIPersistence:
         try:
             thread = session.query(Thread).filter(Thread.id == thread_id).first()
             if thread:
-                thread.updated_at = datetime.now(timezone.utc)
+                thread.updated_at = datetime.now(UTC)
                 if user_id:
                     thread.user_id = user_id
                 if metadata:
@@ -291,7 +291,7 @@ class AGUIPersistence:
         try:
             run = session.query(Run).filter(Run.id == run_id).first()
             if run:
-                run.finished_at = datetime.now(timezone.utc)
+                run.finished_at = datetime.now(UTC)
                 run.status = status
                 run.error_message = error_message
                 session.commit()

@@ -6,14 +6,7 @@ to determine which sub-agent should handle a given request.
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-
-from strands import Agent
-
-
-# Agent factory: async callable that takes opensearch_url and returns a Strands Agent
-AgentFactory = Callable[[str], Awaitable[Agent]]
 
 
 @dataclass
@@ -22,7 +15,6 @@ class AgentRegistration:
 
     name: str
     description: str
-    factory: AgentFactory
     page_contexts: list[str] = field(default_factory=list)
     is_fallback: bool = False
 

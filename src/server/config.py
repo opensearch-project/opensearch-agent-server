@@ -24,9 +24,7 @@ import os
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from utils.logging_helpers import get_logger, log_error_event, log_warning_event
 from server.constants import (
-    DEFAULT_AGENT_CACHE_SIZE,
     DEFAULT_AUTH_ENABLED,
     DEFAULT_AUTH_MODE,
     DEFAULT_AUTH_STRATEGIES,
@@ -47,6 +45,7 @@ from server.constants import (
     DEFAULT_SERVER_PORT,
     DEFAULT_THREAD_LIMIT,
 )
+from utils.logging_helpers import get_logger, log_error_event, log_warning_event
 
 
 def _inject_env_var(data: dict, key: str, env_var_name: str) -> None:
@@ -199,13 +198,6 @@ class ServerConfig(BaseSettings):
         default=DEFAULT_EVENT_LIMIT,
         ge=1,
         description="Default maximum number of events in paginated responses",
-    )
-
-    # Agent Configuration
-    agent_cache_size: int = Field(
-        default=DEFAULT_AGENT_CACHE_SIZE,
-        ge=0,
-        description="Maximum number of agents to cache per thread (0 disables caching)",
     )
 
     # Observability Configuration

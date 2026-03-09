@@ -17,11 +17,6 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from utils.logging_helpers import (
-    get_logger,
-    log_error_event,
-    log_warning_event,
-)
 from server.constants import (
     DEFAULT_MAX_RETRIES,
     DEFAULT_MIN_RETRY_DELAY,
@@ -31,6 +26,11 @@ from server.constants import (
     DEFAULT_RETRY_MAX_DELAY,
 )
 from server.error_classification import classify_error, is_transient_error
+from utils.logging_helpers import (
+    get_logger,
+    log_error_event,
+    log_warning_event,
+)
 
 logger = get_logger(__name__)
 
