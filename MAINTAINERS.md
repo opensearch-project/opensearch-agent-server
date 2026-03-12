@@ -8,4 +8,4 @@ This document contains a list of maintainers in this repo. See [opensearch-proje
 | --------------------- | ------------------------------------------------------------- | ----------- |
 | Mingshi Liu           | [kaituo](https://github.com/mingshl)                          | Amazon      |
 | Jiaping Zeng          | [jiapingzeng](https://github.com/jiapingzeng)                 | Amazon      |
-| Daniel Wrigley        | [wrigleyDan](https://github.com/wrigleyDan)                   | Amazon      |
+| Daniel Wrigley        | [wrigleyDan](https://github.com/wrigleyDan)                   | OpenSource Connections      |
