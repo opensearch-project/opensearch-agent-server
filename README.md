@@ -21,7 +21,7 @@ OpenSearch Dashboards (AG-UI)
     ├── Router (context-based)
     ├── Agent Registry
     │   ├── ART Agent (strands-agents)
-    │   └── Fallback Agent
+    │   └── Default Agent
     └── OpenSearch MCP Server
             ↓
     OpenSearch Cluster
