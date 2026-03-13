@@ -102,9 +102,37 @@ AG_UI_LOG_LEVEL=INFO
 
 ## Quick Start
 
-### Complete Setup (3-Component Stack)
+### Complete Setup (Docker Compose) - Recommended
 
-To run the full demo with OpenSearch, Agent Server, and Dashboards:
+The easiest way to run the full 3-component stack (OpenSearch, Agent Server, and Dashboards) is using Docker Compose.
+
+1. **Configure Environment**
+   ```bash
+   cp .env.docker .env.docker  # Note: Edit this if you need to add LLM provider credentials
+   ```
+
+2. **Start the Stack**
+   ```bash
+   docker-compose up -d --build
+   ```
+
+3. **Verify Health**
+   ```bash
+   # Check Agent Server health
+   curl http://localhost:8001/health
+
+   # Check if Dashboards is up (it may take a minute)
+   curl -I http://localhost:5601
+   ```
+
+4. **Access the Chat**
+   - Open http://localhost:5601
+   - Click the chat icon (💬) in the top-right header
+   - Start asking questions about your data!
+
+### Manual Setup (Option 2)
+
+To run the components individually:
 
 **Terminal 1 - OpenSearch**
 ```bash

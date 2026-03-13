@@ -1,0 +1,15 @@
+server.host: "0.0.0.0"
+opensearch.hosts: ["http://opensearch:9200"]
+opensearch.ssl.verificationMode: none
+
+# OpenSearch Agent Server Integration
+uiSettings:
+  overrides:
+    "home:useNewHomePage": true
+
+contextProvider:
+  enabled: true
+
+chat:
+  enabled: true
+  agUiUrl: "http://localhost:8001/runs"
