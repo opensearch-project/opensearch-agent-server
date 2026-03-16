@@ -13,6 +13,8 @@ from dotenv import load_dotenv
 from strands import Agent
 from strands.models.bedrock import BedrockModel
 
+from agents.art.config import ARTAgentConfig
+from agents.tool_filter import TOOL_GROUPS, _select_tools
 from utils.logging_helpers import get_logger, log_info_event
 from utils.monitored_tool import monitored_tool
 
@@ -190,6 +192,9 @@ Always include concrete metrics (CTR percentages, click counts, search volumes) 
 # Global variable to store MCP tools (will be set during initialization)
 _opensearch_tools: list = []
 
+# Agent tool configuration — reads ART_* env vars once at import time.
+_art_config = ARTAgentConfig()
+
 
 def set_opensearch_tools(tools: list[Any]) -> None:
     """Set the OpenSearch MCP tools to be used by specialized agents."""
@@ -234,9 +239,9 @@ async def hypothesis_agent(query: str) -> str:
         )
 
         hypothesis_tools = [
-            # OpenSearch MCP tools
-            *_opensearch_tools,
-            # Experiment tools
+            # OpenSearch MCP tools — driven by ART_HYPOTHESIS_AGENT_TOOLS
+            *_select_tools(_opensearch_tools, _art_config.hypothesis_agent_tools),
+            # Experiment aggregation (local computation, not an MCP tool)
             aggregate_experiment_results,
         ]
 
@@ -291,9 +296,9 @@ async def evaluation_agent(query: str) -> str:
 
         # Combine OpenSearch MCP tools with evaluation-specific tools
         evaluation_tools = [
-            # OpenSearch MCP tools
-            *_opensearch_tools,
-            # Experiment tools
+            # OpenSearch MCP tools — driven by ART_EVALUATION_AGENT_TOOLS
+            *_select_tools(_opensearch_tools, _art_config.evaluation_agent_tools),
+            # Experiment aggregation (local computation, not an MCP tool)
             aggregate_experiment_results,
         ]
 
@@ -342,8 +347,8 @@ async def user_behavior_analysis_agent(query: str) -> str:
         )
 
         ubi_tools = [
-            # OpenSearch MCP tools
-            *_opensearch_tools,
+            # OpenSearch MCP tools — driven by ART_UBI_AGENT_TOOLS
+            *_select_tools(_opensearch_tools, _art_config.ubi_agent_tools),
         ]
 
         # Create specialized agent with UBI analytics focus

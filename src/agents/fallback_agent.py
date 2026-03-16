@@ -12,6 +12,8 @@ from mcp.client.streamable_http import streamablehttp_client
 from strands import Agent
 from strands.tools.mcp import MCPClient
 
+from agents.default_config import FallbackAgentConfig
+from agents.tool_filter import _select_tools
 from server.constants import DEFAULT_MCP_SERVER_URL
 from utils.logging_helpers import get_logger, log_info_event
 
@@ -34,15 +36,23 @@ When answering:
 - If you don't have the right tool for a request, explain what's available
 """
 
+# Agent tool configuration — reads FALLBACK_* env vars once at import time.
+_fallback_config = FallbackAgentConfig()
+
 
 def create_fallback_agent(
     opensearch_url: str, headers: dict[str, str] | None = None
 ) -> Agent:
-    """Create the fallback agent with all OpenSearch MCP tools.
+    """Create the fallback agent with OpenSearch MCP tools.
 
     Connects to the OpenSearch MCP server via Streamable HTTP transport.
     The server URL defaults to ``http://localhost:3001/mcp`` and can be
     overridden with the ``MCP_SERVER_URL`` environment variable.
+
+    The set of tools available to the agent is controlled by the
+    ``FALLBACK_AGENT_TOOLS`` environment variable (comma-separated category
+    names or individual tool names).  When the variable is unset or empty
+    all MCP tools are available.
 
     Args:
         opensearch_url: OpenSearch cluster URL (informational — the MCP
@@ -56,19 +66,23 @@ def create_fallback_agent(
     mcp_server_url = os.getenv("MCP_SERVER_URL", DEFAULT_MCP_SERVER_URL)
 
     mcp_client = MCPClient(lambda: streamablehttp_client(mcp_server_url, headers=headers))
+    mcp_client.start()
+
+    all_tools = list(mcp_client.list_tools_sync())
+    tools = _select_tools(all_tools, _fallback_config.agent_tools)
 
     agent = Agent(
         system_prompt=FALLBACK_SYSTEM_PROMPT,
-        tools=[mcp_client],
+        tools=tools,
     )
 
-    tool_count = len(agent.tool_registry.registry)
     log_info_event(
         logger,
-        f"Fallback agent initialized with {tool_count} MCP tools "
+        f"Fallback agent initialized with {len(tools)}/{len(all_tools)} MCP tools "
         f"(server={mcp_server_url}).",
         "fallback_agent.initialized",
-        tool_count=tool_count,
+        tool_count=len(tools),
+        total_tool_count=len(all_tools),
         mcp_server_url=mcp_server_url,
         opensearch_url=opensearch_url,
     )
