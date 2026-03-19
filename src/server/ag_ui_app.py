@@ -314,9 +314,9 @@ def create_app(config_override: ServerConfig | None = None) -> FastAPI:
         # Register ART agent (search relevance page)
         registry.register(AgentRegistration(
             name="art",
-            description="Search Relevance Testing agent (ART) — hypothesis generation, "
-            "evaluation, UBI analysis, and online A/B testing",
-            page_contexts=["search-relevance", "searchRelevance"],
+            description="Search Relevance Tuning agent (ART) — hypothesis generation, "
+            "evaluation, and UBI analysis.",
+            page_contexts=["search_overview", "search-relevance", "searchRelevance"],
             is_fallback=False,
         ))
 
@@ -366,7 +366,7 @@ def create_app(config_override: ServerConfig | None = None) -> FastAPI:
             factory=lambda headers: create_art_agent(
                 opensearch_url, headers=headers
             ),
-            description="Search Relevance Testing agent (ART)",
+            description="Search Relevance Tuning agent (ART)",
         )
         log_info_event(
             logger,
