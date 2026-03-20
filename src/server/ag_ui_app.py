@@ -317,7 +317,7 @@ def create_app(config_override: ServerConfig | None = None) -> FastAPI:
             description="Search Relevance Tuning agent (ART) — hypothesis generation, "
             "evaluation, and UBI analysis.",
             page_contexts=["search_overview", "search-relevance", "searchRelevance"],
-            is_fallback=False,
+            is_default=False,
         ))
 
         # Register default agent (handles all unmatched page contexts)
