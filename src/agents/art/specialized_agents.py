@@ -223,7 +223,7 @@ async def hypothesis_agent(query: str) -> str:
     try:
         # Import experimentation tools. This agent is meant to do only sanity checks,
         # so we don't need all experiment tools.
-        from tools.art.experiment_tools import (
+        from src.tools.art.experiment_tools import (
             aggregate_experiment_results,
         )
 
@@ -279,7 +279,7 @@ async def evaluation_agent(query: str) -> str:
 
     try:
         # Import evaluation-specific tools
-        from tools.art.experiment_tools import (
+        from src.tools.art.experiment_tools import (
             aggregate_experiment_results,
         )
 

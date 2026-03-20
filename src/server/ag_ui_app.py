@@ -304,7 +304,7 @@ def create_app(config_override: ServerConfig | None = None) -> FastAPI:
 
         # --- Orchestrator setup: register agent factories ---
         from agents.art.art_agent import create_art_agent
-        from agents.fallback_agent import create_fallback_agent
+        from agents.default_agent import create_default_agent
         from orchestrator.registry import AgentRegistration, AgentRegistry
         from orchestrator.router import PageContextRouter
 
@@ -320,12 +320,12 @@ def create_app(config_override: ServerConfig | None = None) -> FastAPI:
             is_fallback=False,
         ))
 
-        # Register fallback agent (handles all unmatched page contexts)
+        # Register default agent (handles all unmatched page contexts)
         registry.register(AgentRegistration(
-            name="fallback",
+            name="default",
             description="General OpenSearch assistant with MCP tools",
             page_contexts=[],
-            is_fallback=True,
+            is_default=True,
         ))
 
         log_info_event(
@@ -346,18 +346,18 @@ def create_app(config_override: ServerConfig | None = None) -> FastAPI:
         # to the MCP server (and ultimately to OpenSearch).
         orchestrator = AgentOrchestrator(router)
 
-        # Register fallback agent factory
+        # Register default agent factory
         orchestrator.register_agent_factory(
-            name="fallback",
-            factory=lambda headers: create_fallback_agent(
+            name="default",
+            factory=lambda headers: create_default_agent(
                 opensearch_url, headers=headers
             ),
             description="General OpenSearch assistant with MCP tools",
         )
         log_info_event(
             logger,
-            "✓ Fallback agent factory registered",
-            "ag_ui.fallback_agent_factory_ready",
+            "✓ Default agent factory registered",
+            "ag_ui.default_agent_factory_ready",
         )
 
         # Register ART agent factory
@@ -559,7 +559,7 @@ async def list_agents(request: Request) -> dict:
                 "name": reg.name,
                 "description": reg.description,
                 "page_contexts": reg.page_contexts,
-                "is_fallback": reg.is_fallback,
+                "is_default": reg.is_default,
             }
             for reg in registry.list_agents()
         ]

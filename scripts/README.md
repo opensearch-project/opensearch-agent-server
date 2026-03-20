@@ -35,7 +35,7 @@ Starts a conversation with an agent and streams the response.
 # Ask about ART agent specifically
 ./scripts/test_run.sh "How do I use the hypothesis agent?" localhost:8001 search-relevance
 
-# Test the fallback agent
+# Test the default agent
 ./scripts/test_run.sh "Who are you?" localhost:8001 some-other-context
 ```
 

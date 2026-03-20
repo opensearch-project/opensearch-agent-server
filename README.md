@@ -266,7 +266,7 @@ opensearch-agent-server/
 │   │   │   ├── art_agent.py       # ART orchestrator agent
 │   │   │   └── specialized_agents.py  # Hypothesis, evaluation, UBI sub-agents
 │   │   ├── base.py                # Agent protocol / base types
-│   │   └── fallback_agent.py      # General OpenSearch assistant
+│   │   └── default_agent.py       # General OpenSearch assistant
 │   ├── orchestrator/              # Routing and registry
 │   │   ├── router.py              # Context-based routing
 │   │   └── registry.py            # Agent registry
@@ -280,6 +280,7 @@ opensearch-agent-server/
 │   │   └── art/                   # ART-specific tools
 │   │       └── experiment_tools.py  # Experiment results aggregation
 │   └── utils/                     # Shared utilities
+│       ├── mcp_connection.py      # OpenSearch MCP client
 │       ├── logging_helpers.py     # Structured logging
 │       ├── monitored_tool.py      # Tool instrumentation wrapper
 │       └── ...                    # Persistence, activity monitor, etc.

@@ -16,7 +16,7 @@ class AgentRegistration:
     name: str
     description: str
     page_contexts: list[str] = field(default_factory=list)
-    is_fallback: bool = False
+    is_default: bool = False
 
 
 class AgentRegistry:
@@ -29,7 +29,7 @@ class AgentRegistry:
     def __init__(self) -> None:
         self._agents: dict[str, AgentRegistration] = {}
         self._page_context_map: dict[str, str] = {}  # page_context -> agent_name
-        self._fallback_name: str | None = None
+        self._default_name: str | None = None
 
     def register(self, registration: AgentRegistration) -> None:
         """Register a sub-agent.
@@ -54,8 +54,8 @@ class AgentRegistry:
         for ctx in registration.page_contexts:
             self._page_context_map[ctx] = registration.name
 
-        if registration.is_fallback:
-            self._fallback_name = registration.name
+        if registration.is_default:
+            self._default_name = registration.name
 
     def get_agent_for_context(self, page_context: str) -> AgentRegistration | None:
         """Look up the agent registered for a page context.
@@ -71,14 +71,14 @@ class AgentRegistry:
             return self._agents[agent_name]
         return None
 
-    def get_fallback(self) -> AgentRegistration | None:
-        """Get the fallback agent registration.
+    def get_default(self) -> AgentRegistration | None:
+        """Get the default agent registration.
 
         Returns:
-            The fallback AgentRegistration, or None if not registered.
+            The default AgentRegistration, or None if not registered.
         """
-        if self._fallback_name:
-            return self._agents.get(self._fallback_name)
+        if self._default_name:
+            return self._agents.get(self._default_name)
         return None
 
     def list_agents(self) -> list[AgentRegistration]:

@@ -1,4 +1,4 @@
-"""Fallback Agent — General OpenSearch Assistant.
+"""Default Agent — General OpenSearch Assistant.
 
 A simple Strands agent with all OpenSearch MCP Server tools.
 Handles general queries when no specialized sub-agent matches the page context.
@@ -17,7 +17,7 @@ from utils.logging_helpers import get_logger, log_info_event
 
 logger = get_logger(__name__)
 
-FALLBACK_SYSTEM_PROMPT = """You are a helpful OpenSearch assistant. You help users understand
+DEFAULT_SYSTEM_PROMPT = """You are a helpful OpenSearch assistant. You help users understand
 and manage their OpenSearch clusters.
 
 You have access to OpenSearch tools via the MCP Server. Use them to answer questions about:
@@ -35,10 +35,10 @@ When answering:
 """
 
 
-def create_fallback_agent(
+def create_default_agent(
     opensearch_url: str, headers: dict[str, str] | None = None
 ) -> Agent:
-    """Create the fallback agent with all OpenSearch MCP tools.
+    """Create the default agent with all OpenSearch MCP tools.
 
     Connects to the OpenSearch MCP server via Streamable HTTP transport.
     The server URL defaults to ``http://localhost:3001/mcp`` and can be
@@ -58,16 +58,16 @@ def create_fallback_agent(
     mcp_client = MCPClient(lambda: streamablehttp_client(mcp_server_url, headers=headers))
 
     agent = Agent(
-        system_prompt=FALLBACK_SYSTEM_PROMPT,
+        system_prompt=DEFAULT_SYSTEM_PROMPT,
         tools=[mcp_client],
     )
 
     tool_count = len(agent.tool_registry.registry)
     log_info_event(
         logger,
-        f"Fallback agent initialized with {tool_count} MCP tools "
+        f"Default agent initialized with {tool_count} MCP tools "
         f"(server={mcp_server_url}).",
-        "fallback_agent.initialized",
+        "default_agent.initialized",
         tool_count=tool_count,
         mcp_server_url=mcp_server_url,
         opensearch_url=opensearch_url,
