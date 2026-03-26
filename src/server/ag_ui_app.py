@@ -349,8 +349,8 @@ def create_app(config_override: ServerConfig | None = None) -> FastAPI:
         # Register fallback agent factory
         orchestrator.register_agent_factory(
             name="fallback",
-            factory=lambda headers: create_fallback_agent(
-                opensearch_url, headers=headers
+            factory=lambda headers_getter: create_fallback_agent(
+                opensearch_url, headers_getter
             ),
             description="General OpenSearch assistant with MCP tools",
         )
@@ -360,11 +360,14 @@ def create_app(config_override: ServerConfig | None = None) -> FastAPI:
             "ag_ui.fallback_agent_factory_ready",
         )
 
-        # Register ART agent factory
+        # Register ART agent factory.
+        # The factory receives a headers_getter callable that returns current headers
+        # on each MCP connection. This allows the cached agent to use fresh per-request
+        # auth headers (e.g., rotated Bearer tokens) without requiring agent recreation.
         orchestrator.register_agent_factory(
             name="art",
-            factory=lambda headers: create_art_agent(
-                opensearch_url, headers=headers
+            factory=lambda headers_getter: create_art_agent(
+                opensearch_url, headers_getter
             ),
             description="Search Relevance Testing agent (ART)",
         )

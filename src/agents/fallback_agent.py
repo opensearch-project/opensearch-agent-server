@@ -6,6 +6,7 @@ Handles general queries when no specialized sub-agent matches the page context.
 
 from __future__ import annotations
 
+from typing import Callable
 import os
 
 from mcp.client.streamable_http import streamablehttp_client
@@ -36,7 +37,7 @@ When answering:
 
 
 def create_fallback_agent(
-    opensearch_url: str, headers: dict[str, str] | None = None
+    opensearch_url: str, headers_getter: Callable[[], dict[str, str] | None]
 ) -> Agent:
     """Create the fallback agent with all OpenSearch MCP tools.
 
@@ -47,15 +48,16 @@ def create_fallback_agent(
     Args:
         opensearch_url: OpenSearch cluster URL (informational — the MCP
             server is assumed to already be configured for this cluster).
-        headers: Optional HTTP headers to forward to the MCP server
-            (e.g. Authorization for OpenSearch authentication).
+        headers_getter: Callable that returns current HTTP headers to forward to the
+            MCP server (e.g. auth headers). Called dynamically on each MCP connection
+            to ensure fresh headers are used even when the agent is cached.
 
     Returns:
         Configured Strands Agent with MCP tools.
     """
     mcp_server_url = os.getenv("MCP_SERVER_URL", DEFAULT_MCP_SERVER_URL)
 
-    mcp_client = MCPClient(lambda: streamablehttp_client(mcp_server_url, headers=headers))
+    mcp_client = MCPClient(lambda: streamablehttp_client(mcp_server_url, headers=headers_getter()))
 
     agent = Agent(
         system_prompt=FALLBACK_SYSTEM_PROMPT,

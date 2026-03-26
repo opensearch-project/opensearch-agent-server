@@ -8,6 +8,7 @@ Orchestrates 3 specialized agents for search relevance tuning:
 
 from __future__ import annotations
 
+from typing import Callable
 import os
 
 import boto3
@@ -95,7 +96,7 @@ def _create_orchestrator_model(inference_profile_arn: str) -> BedrockModel:
 
 
 def create_art_agent(
-    opensearch_url: str, headers: dict[str, str] | None = None
+    opensearch_url: str, headers_getter: Callable[[], dict[str, str] | None]
 ) -> Agent:
     """Create the ART orchestrator agent.
 
@@ -104,7 +105,9 @@ def create_art_agent(
 
     Args:
         opensearch_url: OpenSearch cluster URL.
-        headers: Optional HTTP headers to forward to the MCP server (e.g. auth headers).
+        headers_getter: Callable that returns current HTTP headers to forward to the
+            MCP server (e.g. auth headers). Called dynamically on each MCP connection
+            to ensure fresh headers are used even when the agent is cached.
 
     Returns:
         A Strands Agent configured as the ART orchestrator.
@@ -135,7 +138,10 @@ def create_art_agent(
 
     mcp_server_url = os.getenv("MCP_SERVER_URL", DEFAULT_MCP_SERVER_URL)
 
-    mcp_client = MCPClient(lambda: streamablehttp_client(mcp_server_url, headers=headers))
+    # The transport lambda calls headers_getter() dynamically to fetch current headers
+    # on each connection. This allows the cached agent to use fresh headers (e.g.,
+    # rotated auth tokens) on every request without requiring agent recreation.
+    mcp_client = MCPClient(lambda: streamablehttp_client(mcp_server_url, headers=headers_getter()))
     mcp_client.start()
 
     log_info_event(

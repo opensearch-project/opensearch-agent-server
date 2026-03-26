@@ -3,9 +3,10 @@
 ``ag_ui_strands.StrandsAgent`` instances are created once per agent name and
 then cached so that the per-thread ``StrandsAgentCore`` (and its
 ``ConversationManager``) survives across requests, giving the agent persistent
-conversation memory.  The first request for each agent name passes its HTTP
-headers (e.g. Authorization) to the factory so they can be forwarded to the
-MCP server.  The outer shell (routing, auth, persistence, SSE encoding,
+conversation memory.  Each request stores its HTTP headers (e.g. Authorization)
+which are fetched dynamically by the MCP client transport on each connection,
+allowing cached agents to use fresh per-request credentials without requiring
+agent recreation.  The outer shell (routing, auth, persistence, SSE encoding,
 cancellation) remains custom; this module is the thin glue between the
 router and the off-the-shelf AG-UI event conversion layer.
 """
@@ -26,9 +27,10 @@ from utils.logging_helpers import get_logger, log_debug_event, log_info_event
 
 logger = get_logger(__name__)
 
-# A factory callable that receives optional HTTP headers and returns a
-# pre-configured Strands Agent.
-AgentFactory = Callable[[dict[str, str] | None], StrandsAgentCore]
+# A factory callable that receives a headers_getter function and returns a
+# pre-configured Strands Agent. The headers_getter is called dynamically to
+# fetch current headers on each MCP connection.
+AgentFactory = Callable[[Callable[[], dict[str, str] | None]], StrandsAgentCore]
 
 
 def _extract_app_id_from_context(context: list) -> str | None:
@@ -103,6 +105,7 @@ class AgentOrchestrator:
     def __init__(self, router: PageContextRouter) -> None:
         self._agent_factories: dict[str, dict[str, Any]] = {}
         self._cached_agui_agents: dict[str, AGUIStrandsAgent] = {}
+        self._current_headers: dict[str, dict[str, str] | None] = {}
         self._router = router
 
     def register_agent_factory(
@@ -116,8 +119,9 @@ class AgentOrchestrator:
 
         Args:
             name: Unique agent name (must match registry name).
-            factory: Callable that accepts optional headers dict and
-                returns a pre-configured Strands Agent.
+            factory: Callable that accepts a headers_getter function and
+                returns a pre-configured Strands Agent. The headers_getter
+                is called dynamically to fetch current headers on each MCP connection.
             description: Human-readable description.
             config: Optional tool-behavior configuration.
         """
@@ -148,9 +152,10 @@ class AgentOrchestrator:
         Args:
             input_data: AG-UI ``RunAgentInput``.
             agent_name: Explicit agent name (skips routing).
-            headers: Optional HTTP headers to forward to the MCP server on
-                first agent creation (e.g. Authorization for OpenSearch
-                authentication).  Ignored once the agent is cached.
+            headers: Optional HTTP headers to forward to the MCP server
+                (e.g. Authorization for OpenSearch authentication). Headers
+                are stored and passed dynamically to the MCP client, so they
+                are always current even when the agent is cached.
 
         Yields:
             AG-UI protocol events.
@@ -174,14 +179,19 @@ class AgentOrchestrator:
                 f"Available: {list(self._agent_factories)}"
             )
 
+        # Store current headers for this agent so the MCP client transport
+        # can fetch them dynamically on each request.
+        self._current_headers[agent_name] = headers
+
         # Reuse a cached AGUIStrandsAgent so that its _agents_by_thread dict
         # (and the Strands ConversationManager inside each per-thread agent)
-        # persists across requests.  On first use, the factory is called with
-        # the caller's auth headers to initialise the MCP connection; those
-        # headers are reused for the lifetime of the cached agent.
+        # persists across requests. The factory receives a headers_getter
+        # callable that always returns the current headers for this agent.
         agui_agent = self._cached_agui_agents.get(agent_name)
         if agui_agent is None:
-            strands_agent = factory_info["factory"](headers)
+            strands_agent = factory_info["factory"](
+                lambda: self._current_headers.get(agent_name)
+            )
             agui_agent = AGUIStrandsAgent(
                 agent=strands_agent,
                 name=agent_name,
