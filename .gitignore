@@ -30,6 +30,9 @@ run_demo.sh
 *.swp
 *.swo
 
+# Quickstart workspace
+agent-quickstart/
+
 # OS files
 .DS_Store
 Thumbs.db

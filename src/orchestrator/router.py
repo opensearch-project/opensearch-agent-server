@@ -32,7 +32,7 @@ class PageContextRouter:
             The AgentRegistration that should handle this request.
 
         Raises:
-            RuntimeError: If no fallback agent is registered and no match is found.
+            RuntimeError: If no default agent is registered and no match is found.
         """
         # Tier 1: Deterministic page_context match
         if page_context:
@@ -50,18 +50,18 @@ class PageContextRouter:
         # Tier 2: LLM-based intent detection (future)
         # TODO: Analyze user message content to determine intent and route accordingly
 
-        # Tier 3: Fallback
-        fallback = self._registry.get_fallback()
-        if fallback is None:
+        # Tier 3: Default agent
+        default = self._registry.get_default()
+        if default is None:
             raise RuntimeError(
-                "No fallback agent registered. Register an agent with is_fallback=True."
+                "No default agent registered. Register an agent with is_default=True."
             )
 
         log_info_event(
             logger,
-            f"Fallback: page_context='{page_context}' -> agent='{fallback.name}'",
-            "router.fallback",
+            f"Default: page_context='{page_context}' -> agent='{default.name}'",
+            "router.default",
             page_context=page_context,
-            agent_name=fallback.name,
+            agent_name=default.name,
         )
-        return fallback
+        return default

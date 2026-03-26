@@ -20,7 +20,7 @@ from strands.tools.mcp import MCPClient
 from agents.art.specialized_agents import (
     evaluation_agent,
     hypothesis_agent,
-    set_opensearch_tools,
+    set_mcp_client,
     user_behavior_analysis_agent,
 )
 from utils.logging_helpers import get_logger, log_info_event
@@ -142,19 +142,17 @@ def create_art_agent(
     # on each connection. This allows the cached agent to use fresh headers (e.g.,
     # rotated auth tokens) on every request without requiring agent recreation.
     mcp_client = MCPClient(lambda: streamablehttp_client(mcp_server_url, headers=headers_getter()))
-    mcp_client.start()
 
     log_info_event(
         logger,
-        f"MCP client started for {mcp_server_url}",
-        "art_agent.mcp_started",
+        f"MCP client created for {mcp_server_url}",
+        "art_agent.mcp_created",
         mcp_server_url=mcp_server_url,
     )
 
-    # Signal to specialized agents that the MCP connection is ready.
-    # The specialized agents use local tool functions (src/tools/) for their
-    # actual work; this just marks initialization as complete.
-    set_opensearch_tools(list(mcp_client.list_tools_sync()))
+    # Share the authenticated MCPClient with specialized agents so they
+    # use the same transport (and auth headers) when calling MCP tools.
+    set_mcp_client(mcp_client)
 
     # Build the orchestrator agent
     orchestrator = Agent(

@@ -47,16 +47,16 @@ chat:
 # server.cors.origin: ["http://localhost:8001"]
 
 # Enable multiple data source feature
-# data_source.enabled: true
+data_source.enabled: true
 
 # Enable workspace feature
-# workspace.enabled: true
+workspace.enabled: true
 
 # Allow using local cluster as data source
-# data_source.hideLocalCluster: false
+data_source.hideLocalCluster: false
 
 # Enable explore
-# explore.enabled: true
+explore.enabled: true
 
 # ============================================
 # Troubleshooting

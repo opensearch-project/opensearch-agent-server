@@ -102,9 +102,25 @@ AG_UI_LOG_LEVEL=INFO
 
 ## Quick Start
 
-### Complete Setup (3-Component Stack)
+```bash
+./scripts/quickstart.sh
+```
 
-To run the full demo with OpenSearch, Agent Server, and Dashboards:
+This clones, builds, and starts everything in one command:
+
+1. Clones [search-relevance](https://github.com/opensearch-project/search-relevance) and [OpenSearch Dashboards](https://github.com/opensearch-project/OpenSearch-Dashboards) (with the [dashboards-search-relevance](https://github.com/opensearch-project/dashboards-search-relevance) plugin)
+2. Bootstraps OSD and starts OpenSearch via `./gradlew run`
+3. Starts MCP Server (port 3001), OSD (port 5601), and Agent Server (port 8001)
+4. Creates a workspace with a local data source and loads demo data
+5. Runs a smoke test against all services
+
+**Prerequisites:** Java 21+, Node.js 20+, Python 3.12+, [uv](https://astral.sh/uv), yarn, jq, curl
+
+**Access the Chat:** Open http://localhost:5601 and click the chat icon in the header.
+
+### Manual Setup
+
+To run each component separately:
 
 **Terminal 1 - OpenSearch**
 ```bash
@@ -120,7 +136,6 @@ curl http://localhost:9200 -u admin:Admin1234!
 
 **Terminal 2 - Agent Server**
 ```bash
-# Configure and start opensearch agent server
 cd opensearch-agent-server
 cp .env.example .env
 # Edit .env with your settings
@@ -132,7 +147,6 @@ python run_server.py
 
 **Terminal 3 - OpenSearch Dashboards**
 ```bash
-# Start dashboard (requires Node.js 22+)
 cd OpenSearch-Dashboards
 # Ensure config/opensearch_dashboards.yml has chat.agUiUrl configured
 yarn start --no-base-path
@@ -142,7 +156,7 @@ yarn start --no-base-path
 
 **Access the Chat**
 - Open http://localhost:5601
-- Click the chat icon (💬) in the top-right header
+- Click the chat icon in the top-right header
 - Start asking questions about your data!
 
 ## Usage
@@ -266,7 +280,7 @@ opensearch-agent-server/
 │   │   │   ├── art_agent.py       # ART orchestrator agent
 │   │   │   └── specialized_agents.py  # Hypothesis, evaluation, UBI sub-agents
 │   │   ├── base.py                # Agent protocol / base types
-│   │   └── fallback_agent.py      # General OpenSearch assistant
+│   │   └── default_agent.py       # General OpenSearch assistant
 │   ├── orchestrator/              # Routing and registry
 │   │   ├── router.py              # Context-based routing
 │   │   └── registry.py            # Agent registry
@@ -280,6 +294,7 @@ opensearch-agent-server/
 │   │   └── art/                   # ART-specific tools
 │   │       └── experiment_tools.py  # Experiment results aggregation
 │   └── utils/                     # Shared utilities
+│       ├── mcp_connection.py      # OpenSearch MCP client
 │       ├── logging_helpers.py     # Structured logging
 │       ├── monitored_tool.py      # Tool instrumentation wrapper
 │       └── ...                    # Persistence, activity monitor, etc.
