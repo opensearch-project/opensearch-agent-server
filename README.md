@@ -49,7 +49,7 @@ OpenSearch Dashboards (AG-UI)
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/mingshl/opensearch-agent-server.git
+   git clone https://github.com/opensearch-project/opensearch-agent-server.git
    cd opensearch-agent-server
    ```
 
