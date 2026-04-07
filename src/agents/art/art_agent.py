@@ -17,7 +17,6 @@ from strands import Agent
 from strands.models.bedrock import BedrockModel
 from strands.tools.mcp import MCPClient
 
-from agents.default_agent import _MutableHeaders
 from agents.art.specialized_agents import (
     evaluation_agent,
     hypothesis_agent,
@@ -25,6 +24,7 @@ from agents.art.specialized_agents import (
     user_behavior_analysis_agent,
 )
 from utils.logging_helpers import get_logger, log_info_event
+from utils.obo_context import OboAuth
 
 logger = get_logger(__name__)
 
@@ -96,17 +96,19 @@ def _create_orchestrator_model(inference_profile_arn: str) -> BedrockModel:
     )
 
 
-def create_art_agent(
-    opensearch_url: str, headers: dict[str, str] | None = None
-) -> Agent:
+def create_art_agent(opensearch_url: str) -> Agent:
     """Create the ART orchestrator agent.
 
     Initializes the MCP connection to OpenSearch via MCPClient, configures the
     specialized sub-agents with the resulting tools, and returns the orchestrator Agent.
 
+    Authentication is handled by :class:`~utils.obo_context.OboAuth`, which
+    reads the OBO token from a per-request ``ContextVar``.  The orchestrator
+    sets the token before each run, so concurrent users each get their own
+    credentials — no shared mutable state.
+
     Args:
         opensearch_url: OpenSearch cluster URL.
-        headers: Optional HTTP headers to forward to the MCP server (e.g. auth headers).
 
     Returns:
         A Strands Agent configured as the ART orchestrator.
@@ -137,15 +139,15 @@ def create_art_agent(
 
     mcp_server_url = os.getenv("MCP_SERVER_URL", DEFAULT_MCP_SERVER_URL)
 
-    mutable_headers = _MutableHeaders(headers)
-
+    # OboAuth reads the OBO token from a per-request ContextVar at HTTP
+    # request time.  This is concurrency-safe: each async task carries its
+    # own token, so concurrent users never interfere.
     http_client = httpx.AsyncClient(
-        headers=mutable_headers.headers or {},
+        auth=OboAuth(),
         timeout=httpx.Timeout(30, read=300),
         verify=False,
         follow_redirects=True,
     )
-    mutable_headers.httpx_client = http_client
 
     mcp_client = MCPClient(
         lambda: streamable_http_client(mcp_server_url, http_client=http_client)
@@ -175,7 +177,6 @@ def create_art_agent(
     )
 
     orchestrator._mcp_client = mcp_client  # prevent GC
-    orchestrator._mutable_headers = mutable_headers  # expose for header refresh
 
     log_info_event(
         logger,

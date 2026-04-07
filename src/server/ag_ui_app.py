@@ -360,12 +360,11 @@ def create_app(config_override: ServerConfig | None = None) -> FastAPI:
 
         context_config = StrandsAgentConfig(state_context_builder=_page_context_builder)
 
-        # Register default agent factory
+        # Register default agent factory.
+        # Auth is handled by OboAuth (contextvars) — no headers needed.
         orchestrator.register_agent_factory(
             name="default",
-            factory=lambda headers: create_default_agent(
-                opensearch_url, headers=headers
-            ),
+            factory=lambda: create_default_agent(opensearch_url),
             description="General OpenSearch assistant with MCP tools",
             config=context_config,
         )
@@ -375,12 +374,11 @@ def create_app(config_override: ServerConfig | None = None) -> FastAPI:
             "ag_ui.default_agent_factory_ready",
         )
 
-        # Register ART agent factory
+        # Register ART agent factory.
+        # Auth is handled by OboAuth (contextvars) — no headers needed.
         orchestrator.register_agent_factory(
             name="art",
-            factory=lambda headers: create_art_agent(
-                opensearch_url, headers=headers
-            ),
+            factory=lambda: create_art_agent(opensearch_url),
             description="Search Relevance Tuning agent (ART)",
             config=context_config,
         )

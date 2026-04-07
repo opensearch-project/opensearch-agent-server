@@ -7,7 +7,6 @@ Handles general queries when no specialized sub-agent matches the page context.
 from __future__ import annotations
 
 import os
-from typing import Any
 
 import httpx
 from mcp.client.streamable_http import streamable_http_client
@@ -16,6 +15,7 @@ from strands.tools.mcp import MCPClient
 
 from server.constants import DEFAULT_MCP_SERVER_URL
 from utils.logging_helpers import get_logger, log_info_event
+from utils.obo_context import OboAuth
 
 logger = get_logger(__name__)
 
@@ -37,69 +37,36 @@ When answering:
 """
 
 
-class _MutableHeaders:
-    """A mutable container for HTTP headers that can patch a live httpx client.
-
-    The MCPClient captures a transport factory via closure.  By referencing
-    this mutable object instead of a plain dict, the orchestrator can swap
-    in fresh credentials (e.g. a new OBO token) on every request.
-
-    When ``httpx_client`` is set (after the first MCP session starts), the
-    ``update()`` method patches the live client's default headers in-place —
-    no MCP restart required.
-    """
-
-    def __init__(self, headers: dict[str, str] | None = None) -> None:
-        self.headers = dict(headers) if headers else {}
-        self.httpx_client: Any = None  # set after MCP session starts
-
-    def update(self, headers: dict[str, str] | None) -> None:
-        new = dict(headers) if headers else {}
-        self.headers = new
-        # Patch the live httpx client so the current MCP session picks up
-        # the new token immediately — no stop/start cycle needed.
-        if self.httpx_client is not None:
-            for key, value in new.items():
-                self.httpx_client.headers[key] = value
-
-
-def create_default_agent(
-    opensearch_url: str, headers: dict[str, str] | None = None
-) -> Agent:
+def create_default_agent(opensearch_url: str) -> Agent:
     """Create the default agent with all OpenSearch MCP tools.
 
     Connects to the OpenSearch MCP server via Streamable HTTP transport.
     The server URL defaults to ``http://localhost:3001/mcp`` and can be
     overridden with the ``MCP_SERVER_URL`` environment variable.
 
+    Authentication is handled by :class:`~utils.obo_context.OboAuth`, which
+    reads the OBO token from a per-request ``ContextVar``.  The orchestrator
+    sets the token before each run, so concurrent users each get their own
+    credentials — no shared mutable state.
+
     Args:
         opensearch_url: OpenSearch cluster URL (informational — the MCP
             server is assumed to already be configured for this cluster).
-        headers: Optional HTTP headers to forward to the MCP server
-            (e.g. Authorization for OpenSearch authentication).
 
     Returns:
         Configured Strands Agent with MCP tools.
     """
     mcp_server_url = os.getenv("MCP_SERVER_URL", DEFAULT_MCP_SERVER_URL)
 
-    # Use a mutable header container so the orchestrator can update
-    # credentials (e.g. OBO token) on every request without recreating
-    # the agent or MCP client.
-    mutable_headers = _MutableHeaders(headers)
-
-    # Create the httpx client ourselves so we can patch its default headers
-    # in-place when the OBO token is refreshed.  This avoids restarting the
-    # MCP session on every request.  Using ``streamable_http_client`` (not
-    # the deprecated ``streamablehttp_client``) and passing ``http_client``
-    # externally means the MCP SDK won't close it when the session ends.
+    # OboAuth reads the OBO token from a per-request ContextVar at HTTP
+    # request time.  This is concurrency-safe: each async task carries its
+    # own token, so concurrent users never interfere.
     http_client = httpx.AsyncClient(
-        headers=mutable_headers.headers or {},
+        auth=OboAuth(),
         timeout=httpx.Timeout(30, read=300),
         verify=False,
         follow_redirects=True,
     )
-    mutable_headers.httpx_client = http_client
 
     mcp_client = MCPClient(
         lambda: streamable_http_client(mcp_server_url, http_client=http_client)
@@ -122,7 +89,6 @@ def create_default_agent(
     # runs.  By starting the client manually and passing resolved tools we
     # avoid the ToolProvider lifecycle entirely.
     agent._mcp_client = mcp_client  # prevent GC
-    agent._mutable_headers = mutable_headers  # expose for header refresh
 
     tool_count = len(agent.tool_registry.registry)
     log_info_event(

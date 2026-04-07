@@ -199,19 +199,30 @@ Always include concrete metrics (CTR percentages, click counts, search volumes) 
 
 
 
-# Global variable to store the authenticated MCPClient so specialized agents
-# route tool calls through the same transport (and auth headers).
+# Global variable to store the authenticated MCPClient and its resolved tools.
+# Specialized agents use the resolved tools (not the MCPClient directly) to
+# avoid triggering a second start() on an already-running session.
 _mcp_client: MCPClient | None = None
+_mcp_tools: list | None = None
 
 
 def set_mcp_client(mcp_client: MCPClient) -> None:
-    """Store the authenticated MCPClient for use by specialized agents."""
-    global _mcp_client
+    """Store the authenticated MCPClient and resolve its tools for sub-agents.
+
+    The MCPClient is already started by ``create_art_agent()``.  Passing it
+    directly to ``Agent(tools=[mcp_client])`` would call ``start()`` again,
+    causing "client session is currently running" errors.  Instead we resolve
+    the tools once here and pass them as a plain list to each sub-agent.
+    """
+    global _mcp_client, _mcp_tools
     _mcp_client = mcp_client
+    _mcp_tools = list(mcp_client.list_tools_sync())
     log_info_event(
         logger,
-        "[Agents] MCPClient configured for specialized agents",
+        f"[Agents] MCPClient configured for specialized agents "
+        f"({len(_mcp_tools)} tools resolved)",
         "agents.mcp_client_configured",
+        tool_count=len(_mcp_tools),
     )
 
 
@@ -229,8 +240,8 @@ async def hypothesis_agent(query: str) -> str:
     Returns:
         str: Hypothesis with reasoning and recommendations for solving the issue
     """
-    if not _mcp_client:
-        return "Error: MCPClient not configured. Please initialize MCP connection first."
+    if not _mcp_tools:
+        return "Error: MCP tools not configured. Please initialize MCP connection first."
 
     try:
         model = BedrockModel(
@@ -239,11 +250,12 @@ async def hypothesis_agent(query: str) -> str:
             streaming=True,
         )
 
-        # Create specialized agent with authenticated MCPClient and experiment tools
+        # Use resolved tools (not MCPClient directly) to avoid calling
+        # start() on an already-running session.
         agent = Agent(
             model=model,
             system_prompt=HYPOTHESIS_GENERATOR_SYSTEM_PROMPT,
-            tools=[_mcp_client, aggregate_experiment_results],
+            tools=[*_mcp_tools, aggregate_experiment_results],
         )
 
         # Invoke agent and return response
@@ -273,8 +285,8 @@ async def evaluation_agent(query: str) -> str:
     Returns:
         str: Evaluation results with metrics, analysis, and recommendations
     """
-    if not _mcp_client:
-        return "Error: MCPClient not configured. Please initialize MCP connection first."
+    if not _mcp_tools:
+        return "Error: MCP tools not configured. Please initialize MCP connection first."
 
     try:
         model = BedrockModel(
@@ -283,11 +295,12 @@ async def evaluation_agent(query: str) -> str:
             streaming=True,
         )
 
-        # Create specialized agent with authenticated MCPClient and experiment tools
+        # Use resolved tools (not MCPClient directly) to avoid calling
+        # start() on an already-running session.
         agent = Agent(
             model=model,
             system_prompt=EVALUATION_AGENT_SYSTEM_PROMPT,
-            tools=[_mcp_client, aggregate_experiment_results],
+            tools=[*_mcp_tools, aggregate_experiment_results],
         )
 
         # Invoke agent and return response
@@ -317,8 +330,8 @@ async def user_behavior_analysis_agent(query: str) -> str:
     Returns:
         str: Analysis results with metrics, patterns, and actionable insights
     """
-    if not _mcp_client:
-        return "Error: MCPClient not configured. Please initialize MCP connection first."
+    if not _mcp_tools:
+        return "Error: MCP tools not configured. Please initialize MCP connection first."
 
     try:
         model = BedrockModel(
@@ -327,11 +340,12 @@ async def user_behavior_analysis_agent(query: str) -> str:
             streaming=True,
         )
 
-        # Create specialized agent with authenticated MCPClient
+        # Use resolved tools (not MCPClient directly) to avoid calling
+        # start() on an already-running session.
         agent = Agent(
             model=model,
             system_prompt=USER_BEHAVIOR_ANALYSIS_AGENT_SYSTEM_PROMPT,
-            tools=[_mcp_client],
+            tools=list(_mcp_tools),
         )
 
         # Invoke agent and return response
