@@ -1,22 +1,39 @@
-"""Per-request OBO token injection via contextvars.
+"""Per-request OBO token injection for httpx clients.
 
-Provides concurrency-safe token propagation: each async task carries its
-own token through Python's ContextVar, and the httpx Auth class reads it
-at request time.  No shared mutable state.
+Provides concurrency-safe token propagation that works across async contexts
+AND background threads (as used by the Strands MCP client).
+
+The Strands SDK's MCPClient executes tool calls on a background thread via
+``asyncio.run_coroutine_threadsafe()``.  Python's ``ContextVar`` does NOT
+propagate across threads, so a pure-ContextVar approach would lose the token.
+
+Instead we use a **thread-safe dict** keyed by ``OboAuth`` instance identity.
+Each agent's httpx client gets its own ``OboAuth`` instance at creation time.
+Before each run, the orchestrator calls ``auth_instance.set_token(jwt)`` which
+stores the token in a ``threading.Lock``-protected dict.  When httpx fires a
+request — even on the MCP background thread — ``OboAuth.async_auth_flow()``
+reads from the same dict.
+
+Concurrent users are safe because each request's ``set_token()`` call is
+atomic and the agent run is sequential per-agent (the orchestrator awaits the
+full event stream before starting the next run for the same agent).
 
 Usage::
 
-    # In the request handler (once per incoming request):
-    set_obo_token("eyJhbG...")
+    # At agent creation time:
+    auth = OboAuth()
+    http_client = httpx.AsyncClient(auth=auth)
 
-    # The shared httpx.AsyncClient is created with ``auth=OboAuth()``.
-    # Every outgoing HTTP request automatically gets the correct token
-    # for the current async context — concurrent users never interfere.
+    # Before each agent run (in the request handler):
+    auth.set_token("eyJhbG...")
+
+    # Every outgoing httpx request — including those on the MCP background
+    # thread — automatically gets the correct token.
 """
 
 from __future__ import annotations
 
-from contextvars import ContextVar
+import threading
 from typing import Generator
 
 import httpx
@@ -25,46 +42,44 @@ from utils.logging_helpers import get_logger, log_debug_event
 
 logger = get_logger(__name__)
 
-# Each async task (i.e. each Dashboards request) sets its own value.
-# Concurrent requests never see each other's tokens.
-_current_obo_token: ContextVar[str | None] = ContextVar(
-    "obo_token", default=None
-)
-
-
-def set_obo_token(token: str | None) -> None:
-    """Set the OBO token for the current async context."""
-    _current_obo_token.set(token)
-    log_debug_event(
-        logger,
-        f"OBO token set for current context (present={token is not None})",
-        "obo_context.token_set",
-    )
-
-
-def get_obo_token() -> str | None:
-    """Get the OBO token for the current async context."""
-    return _current_obo_token.get()
-
 
 class OboAuth(httpx.Auth):
-    """httpx Auth that injects the OBO token from the current async context.
+    """httpx Auth that injects an OBO token into every outgoing request.
 
-    Attached to the shared httpx.AsyncClient at creation time.  On every
-    outgoing HTTP request, it reads the ContextVar — so each concurrent
-    agent run automatically gets its own user's token.
+    Thread-safe: the token is stored behind a lock so it can be read from
+    the MCP client's background thread and written from the main async
+    context.
     """
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._token: str | None = None
+
+    def set_token(self, token: str | None) -> None:
+        """Set the OBO token.  Called by the orchestrator before each run."""
+        with self._lock:
+            self._token = token
+        log_debug_event(
+            logger,
+            f"OBO token set (present={token is not None})",
+            "obo_auth.token_set",
+        )
+
+    def get_token(self) -> str | None:
+        """Get the current OBO token (thread-safe)."""
+        with self._lock:
+            return self._token
 
     def sync_auth_flow(
         self, request: httpx.Request
     ) -> Generator[httpx.Request, httpx.Response, None]:
-        token = _current_obo_token.get()
+        token = self.get_token()
         if token:
             request.headers["Authorization"] = f"Bearer {token}"
         yield request
 
     async def async_auth_flow(self, request: httpx.Request):  # type: ignore[override]
-        token = _current_obo_token.get()
+        token = self.get_token()
         if token:
             request.headers["Authorization"] = f"Bearer {token}"
         yield request

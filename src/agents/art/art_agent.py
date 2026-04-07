@@ -102,10 +102,10 @@ def create_art_agent(opensearch_url: str) -> Agent:
     Initializes the MCP connection to OpenSearch via MCPClient, configures the
     specialized sub-agents with the resulting tools, and returns the orchestrator Agent.
 
-    Authentication is handled by :class:`~utils.obo_context.OboAuth`, which
-    reads the OBO token from a per-request ``ContextVar``.  The orchestrator
-    sets the token before each run, so concurrent users each get their own
-    credentials — no shared mutable state.
+    Authentication is handled by :class:`~utils.obo_context.OboAuth`.
+    The orchestrator calls ``obo_auth.set_token()`` before each run to
+    inject the OBO token.  The token is stored behind a threading lock
+    so it is accessible from the MCP client's background thread.
 
     Args:
         opensearch_url: OpenSearch cluster URL.
@@ -139,11 +139,13 @@ def create_art_agent(opensearch_url: str) -> Agent:
 
     mcp_server_url = os.getenv("MCP_SERVER_URL", DEFAULT_MCP_SERVER_URL)
 
-    # OboAuth reads the OBO token from a per-request ContextVar at HTTP
-    # request time.  This is concurrency-safe: each async task carries its
-    # own token, so concurrent users never interfere.
+    # OboAuth injects the OBO token into every outgoing httpx request.
+    # The token is set by the orchestrator before each agent run via
+    # set_token() and stored behind a threading.Lock — so the MCP
+    # client's background thread can read it safely.
+    obo_auth = OboAuth()
     http_client = httpx.AsyncClient(
-        auth=OboAuth(),
+        auth=obo_auth,
         timeout=httpx.Timeout(30, read=300),
         verify=False,
         follow_redirects=True,
@@ -176,7 +178,10 @@ def create_art_agent(opensearch_url: str) -> Agent:
         ],
     )
 
+    # Keep references to prevent GC from closing the MCP session and
+    # to allow the orchestrator to set tokens on subsequent requests.
     orchestrator._mcp_client = mcp_client  # prevent GC
+    orchestrator._obo_auth = obo_auth  # expose for token refresh
 
     log_info_event(
         logger,

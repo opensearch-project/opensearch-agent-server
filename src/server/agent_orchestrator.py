@@ -3,9 +3,9 @@
 ``ag_ui_strands.StrandsAgent`` instances are created once per agent name and
 then cached so that the per-thread ``StrandsAgentCore`` (and its
 ``ConversationManager``) survives across requests, giving the agent persistent
-conversation memory.  Authentication is handled via ``contextvars``: the
-orchestrator sets the OBO token before each run, and the shared httpx client
-reads it at request time via :class:`~utils.obo_context.OboAuth`.
+conversation memory.  Authentication is handled by :class:`~utils.obo_context.OboAuth`
+instances stored on each agent's httpx client — the orchestrator calls
+``set_token()`` before each run to inject fresh credentials.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ from strands import Agent as StrandsAgentCore
 
 from orchestrator.router import PageContextRouter
 from utils.logging_helpers import get_logger, log_debug_event, log_info_event
-from utils.obo_context import set_obo_token
+from utils.obo_context import OboAuth
 
 logger = get_logger(__name__)
 
@@ -107,10 +107,10 @@ class AgentOrchestrator:
     functions.  Each factory returns a ``StrandsAgentCore`` with an httpx
     client configured with :class:`~utils.obo_context.OboAuth`.
 
-    Before each ``run()`` the orchestrator sets the OBO token via
-    :func:`~utils.obo_context.set_obo_token`.  The token is stored in a
-    ``ContextVar``, so concurrent requests each carry their own credentials
-    — no shared mutable state.
+    Before each ``run()`` the orchestrator calls ``OboAuth.set_token()`` on
+    the agent's auth instance.  The token is stored behind a
+    ``threading.Lock``, so it is visible to the MCP client's background
+    thread where httpx requests are actually executed.
     """
 
     def __init__(self, router: PageContextRouter) -> None:
@@ -157,11 +157,11 @@ class AgentOrchestrator:
         from *input_data* and uses :class:`PageContextRouter` to resolve the
         target agent.
 
-        Before yielding events the OBO token from *headers* is set in the
-        current ``ContextVar`` so that :class:`~utils.obo_context.OboAuth`
-        injects it into every outgoing httpx request.  Because ``ContextVar``
-        is per-async-task, concurrent requests from different users each
-        carry their own credentials.
+        Before yielding events the OBO token from *headers* is set on the
+        agent's :class:`~utils.obo_context.OboAuth` instance via
+        ``set_token()``.  The token is stored behind a ``threading.Lock`` so
+        it is accessible from the MCP client's background thread where httpx
+        requests are executed.
 
         Args:
             input_data: AG-UI ``RunAgentInput``.
@@ -172,11 +172,6 @@ class AgentOrchestrator:
         Yields:
             AG-UI protocol events.
         """
-        # Set the OBO token for this async context so every httpx request
-        # made during this agent run carries the correct credentials.
-        token = _extract_bearer_token(headers)
-        set_obo_token(token)
-
         if agent_name is None:
             page_context = _extract_page_context(input_data)
             registration = self._router.route(page_context)
@@ -199,10 +194,6 @@ class AgentOrchestrator:
         # Reuse a cached AGUIStrandsAgent so that its _agents_by_thread dict
         # (and the Strands ConversationManager inside each per-thread agent)
         # persists across requests — giving the agent conversation memory.
-        #
-        # Auth is no longer managed per-agent: OboAuth reads the token from
-        # the ContextVar, so the same cached agent safely serves different
-        # users concurrently.
         agui_agent = self._cached_agui_agents.get(agent_name)
         if agui_agent is None:
             strands_agent = factory_info["factory"]()
@@ -217,6 +208,11 @@ class AgentOrchestrator:
             mcp_ref = getattr(strands_agent, "_mcp_client", None)
             if mcp_ref is not None:
                 agui_agent._mcp_client = mcp_ref
+            # Keep the OboAuth instance so we can call set_token() on
+            # subsequent requests.
+            obo_auth = getattr(strands_agent, "_obo_auth", None)
+            if obo_auth is not None:
+                agui_agent._obo_auth = obo_auth
             self._cached_agui_agents[agent_name] = agui_agent
             log_debug_event(
                 logger,
@@ -231,6 +227,14 @@ class AgentOrchestrator:
                 "orchestrator.agent_reused",
                 agent_name=agent_name,
             )
+
+        # Set the OBO token on the agent's OboAuth instance.  This is
+        # thread-safe (lock-protected) and visible to the MCP client's
+        # background thread where httpx requests are actually executed.
+        token = _extract_bearer_token(headers)
+        obo_auth = getattr(agui_agent, "_obo_auth", None)
+        if obo_auth is not None:
+            obo_auth.set_token(token)
 
         async for event in agui_agent.run(input_data):
             yield event

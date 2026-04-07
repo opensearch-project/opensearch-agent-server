@@ -44,10 +44,10 @@ def create_default_agent(opensearch_url: str) -> Agent:
     The server URL defaults to ``http://localhost:3001/mcp`` and can be
     overridden with the ``MCP_SERVER_URL`` environment variable.
 
-    Authentication is handled by :class:`~utils.obo_context.OboAuth`, which
-    reads the OBO token from a per-request ``ContextVar``.  The orchestrator
-    sets the token before each run, so concurrent users each get their own
-    credentials — no shared mutable state.
+    Authentication is handled by :class:`~utils.obo_context.OboAuth`.
+    The orchestrator calls ``obo_auth.set_token()`` before each run to
+    inject the OBO token.  The token is stored behind a threading lock
+    so it is accessible from the MCP client's background thread.
 
     Args:
         opensearch_url: OpenSearch cluster URL (informational — the MCP
@@ -58,11 +58,13 @@ def create_default_agent(opensearch_url: str) -> Agent:
     """
     mcp_server_url = os.getenv("MCP_SERVER_URL", DEFAULT_MCP_SERVER_URL)
 
-    # OboAuth reads the OBO token from a per-request ContextVar at HTTP
-    # request time.  This is concurrency-safe: each async task carries its
-    # own token, so concurrent users never interfere.
+    # OboAuth injects the OBO token into every outgoing httpx request.
+    # The token is set by the orchestrator before each agent run via
+    # set_token() and stored behind a threading.Lock — so the MCP
+    # client's background thread can read it safely.
+    obo_auth = OboAuth()
     http_client = httpx.AsyncClient(
-        auth=OboAuth(),
+        auth=obo_auth,
         timeout=httpx.Timeout(30, read=300),
         verify=False,
         follow_redirects=True,
@@ -80,15 +82,10 @@ def create_default_agent(opensearch_url: str) -> Agent:
         tools=tools,
     )
 
-    # Keep a reference to the MCPClient on the agent to prevent garbage
-    # collection from closing the session.  When MCPClient is passed
-    # directly to Agent(tools=...) it is registered as a ToolProvider with
-    # consumer tracking; the AGUIStrandsAgent wrapper later extracts
-    # resolved tools and the original Agent may be GC'd, triggering
-    # remove_consumer → stop() which kills the MCP session for subsequent
-    # runs.  By starting the client manually and passing resolved tools we
-    # avoid the ToolProvider lifecycle entirely.
+    # Keep references to prevent GC from closing the MCP session and
+    # to allow the orchestrator to set tokens on subsequent requests.
     agent._mcp_client = mcp_client  # prevent GC
+    agent._obo_auth = obo_auth  # expose for token refresh
 
     tool_count = len(agent.tool_registry.registry)
     log_info_event(
