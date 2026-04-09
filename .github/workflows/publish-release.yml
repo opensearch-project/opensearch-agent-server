@@ -1,0 +1,60 @@
+name: Publish Release
+
+on:
+  push:
+    tags:
+      - "*"
+
+permissions:
+  id-token: write
+  contents: write
+  issues: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract approvers from CODEOWNERS
+        id: codeowners
+        run: |
+          approvers=$(cat .github/CODEOWNERS | grep '\*' | tr -d '* ' | sed 's/@//g' | tr ' ' ',')
+          echo "approvers=$approvers" >> $GITHUB_OUTPUT
+
+      - name: Wait for approval
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.token }}
+          approvers: ${{ steps.codeowners.outputs.approvers }}
+          minimum-approvals: 1
+          issue-title: "Release opensearch-agent-server ${{ github.ref_name }}"
+          issue-body: "Please approve or deny the release of opensearch-agent-server **${{ github.ref_name }}** (commit ${{ github.sha }})"
+          exclude-workflow-initiator-as-approver: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install build tools
+        run: python -m pip install --upgrade build twine
+
+      - name: Build package
+        run: |
+          python -m build --sdist
+          python -m build --wheel
+
+      - name: Create artifacts tarball
+        run: tar zcvf artifacts.tar.gz dist
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: true
+          generate_release_notes: true
+          files: artifacts.tar.gz

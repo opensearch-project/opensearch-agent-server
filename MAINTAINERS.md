@@ -4,8 +4,8 @@ This document contains a list of maintainers in this repo. See [opensearch-proje
 
 ## Current Maintainers
 
-| Maintainer            | GitHub ID                                                     | Affiliation |
-| --------------------- | ------------------------------------------------------------- | ----------- |
-| Mingshi Liu           | [kaituo](https://github.com/mingshl)                          | Amazon      |
-| Jiaping Zeng          | [jiapingzeng](https://github.com/jiapingzeng)                 | Amazon      |
-| Daniel Wrigley        | [wrigleyDan](https://github.com/wrigleyDan)                   | OpenSource Connections      |
+| Maintainer            | GitHub ID                                     | Affiliation |
+| --------------------- |-----------------------------------------------| ----------- |
+| Mingshi Liu           | [mingshl](https://github.com/mingshl)         | Amazon      |
+| Jiaping Zeng          | [jiapingzeng](https://github.com/jiapingzeng) | Amazon      |
+| Daniel Wrigley        | [wrigleyDan](https://github.com/wrigleyDan)   | OpenSource Connections      |
