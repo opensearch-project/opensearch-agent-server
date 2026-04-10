@@ -66,12 +66,11 @@ markers = [
     "integration: integration tests",
 ]
 
+[tool.hatch.build.targets.sdist]
+include = ["src/"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/server", "src/orchestrator", "src/agents", "src/utils", "src/tools"]
 
-[tool.hatch.build.sources]
-"src/server" = "server"
-"src/orchestrator" = "orchestrator"
-"src/agents" = "agents"
-"src/utils" = "utils"
-"src/tools" = "tools"
+[tool.hatch.build.targets.wheel.sources]
+"src" = ""
