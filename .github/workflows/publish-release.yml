@@ -20,7 +20,7 @@ jobs:
       - name: Extract approvers from CODEOWNERS
         id: codeowners
         run: |
-          approvers=$(cat .github/CODEOWNERS | grep '\*' | tr -d '* ' | sed 's/@//g' | tr ' ' ',')
+          approvers=$(cat .github/CODEOWNERS | grep '^\*' | sed 's/^\*[[:space:]]*//' | sed 's/@//g' | tr ' ' ',')
           echo "approvers=$approvers" >> $GITHUB_OUTPUT
 
       - name: Wait for approval
