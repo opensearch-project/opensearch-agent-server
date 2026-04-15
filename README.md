@@ -118,6 +118,43 @@ This clones, builds, and starts everything in one command:
 
 **Access the Chat:** Open http://localhost:5601 and click the chat icon in the header.
 
+## PyPI Installation
+
+If you already have an OpenSearch cluster running and don't need the full quickstart setup, you can install and run the agent server directly from PyPI:
+
+```bash
+pip install opensearch-agent-server
+```
+
+Configure your environment:
+
+```bash
+export OPENSEARCH_URL=https://localhost:9200
+export OPENSEARCH_USERNAME=admin
+export OPENSEARCH_PASSWORD=admin
+export AG_UI_AUTH_ENABLED=false
+```
+
+Start the agent server and MCP server together:
+
+```bash
+opensearch-agent-server --with-mcp
+```
+
+This starts both the OpenSearch MCP Server (port 3001) and the Agent Server (port 8001) in a single process. Both stop together on `Ctrl+C`.
+
+```bash
+# Verify
+curl http://localhost:8001/health    # {"status": "ok"}
+curl http://localhost:8001/agents    # list registered agents
+```
+
+You can also customize the MCP server port and config:
+
+```bash
+opensearch-agent-server --with-mcp --mcp-port 3002 --mcp-config ./custom_mcp.yml
+```
+
 ### Manual Setup
 
 To run each component separately:
@@ -286,6 +323,7 @@ opensearch-agent-server/
 │   │   └── registry.py            # Agent registry
 │   ├── server/                    # FastAPI application
 │   │   ├── ag_ui_app.py           # Main FastAPI app and lifespan
+│   │   ├── cli.py                 # CLI entry point (opensearch-agent-server command)
 │   │   ├── agent_orchestrator.py  # Orchestrator: routes requests to agents
 │   │   ├── run_routes.py          # AG-UI protocol endpoints
 │   │   ├── config.py              # Configuration management

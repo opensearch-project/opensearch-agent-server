@@ -4,11 +4,32 @@ build-backend = "hatchling.build"
 
 [project]
 name = "opensearch-agent-server"
-version = "0.2.0"
+version = "0.2.1"
 description = "OpenSearch Agent Server for OpenSearch Dashboards — multi-agent orchestrator with page-context routing"
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.12"
+keywords = [
+    "opensearch",
+    "agents",
+    "ai",
+    "llm",
+    "mcp",
+    "model-context-protocol",
+    "fastapi",
+    "dashboards",
+    "orchestration",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Framework :: FastAPI",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
 dependencies = [
     "opensearch-py",
     "mcp",
@@ -42,6 +63,16 @@ dev = [
     "mypy>=1.0.0",
 ]
 
+[project.scripts]
+opensearch-agent-server = "server.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/opensearch-project/opensearch-agent-server"
+Documentation = "https://github.com/opensearch-project/opensearch-agent-server/blob/main/README.md"
+Repository = "https://github.com/opensearch-project/opensearch-agent-server"
+Issues = "https://github.com/opensearch-project/opensearch-agent-server/issues"
+Changelog = "https://github.com/opensearch-project/opensearch-agent-server/blob/main/CHANGELOG.md"
+
 [tool.ruff]
 line-length = 88
 indent-width = 4
@@ -71,6 +102,7 @@ include = ["src/"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/server", "src/orchestrator", "src/agents", "src/utils", "src/tools"]
+artifacts = ["src/server/*.yml"]
 
 [tool.hatch.build.targets.wheel.sources]
 "src" = ""
