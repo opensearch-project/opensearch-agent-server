@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 ### Added
+- PPL reference skill and skills auto-discovery for the default agent
 ### Fixed
 ### Removed
 
