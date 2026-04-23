@@ -20,6 +20,26 @@ from utils.obo_context import OboAuth
 
 logger = get_logger(__name__)
 
+
+class LoggingAgentSkills(AgentSkills):
+    """AgentSkills plugin that logs skill activations at INFO level.
+
+    The vended strands plugin logs activations at DEBUG only. This subclass
+    emits a structured INFO event whenever the LLM invokes a skill, so
+    auto-selection is visible in standard logs without enabling DEBUG
+    globally.
+    """
+
+    def _track_activated_skill(self, agent: Agent, skill_name: str) -> None:
+        log_info_event(
+            logger,
+            f"Skill activated by agent: {skill_name}",
+            "default_agent.skill_activated",
+            skill_name=skill_name,
+        )
+        super()._track_activated_skill(agent, skill_name)
+
+
 DEFAULT_SYSTEM_PROMPT = """You are a helpful OpenSearch assistant. You help users understand
 and manage their OpenSearch clusters.
 
@@ -142,7 +162,7 @@ def create_default_agent(opensearch_url: str) -> Agent:
     # Prepare plugins list with AgentSkills if skills are available
     plugins = []
     if skills:
-        agent_skills_plugin = AgentSkills(skills=skills)
+        agent_skills_plugin = LoggingAgentSkills(skills=skills)
         plugins.append(agent_skills_plugin)
         log_info_event(
             logger,
