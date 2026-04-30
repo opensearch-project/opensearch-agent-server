@@ -4,6 +4,7 @@
 ### Added
 - PPL reference skill and skills auto-discovery for the default agent
 ### Fixed
+- Default agent now respects `BEDROCK_INFERENCE_PROFILE_ARN` env var instead of silently falling back to a hardcoded Sonnet 4 model (fixes #94)
 ### Removed
 
 ## [0.2.0] - 2026-04-10

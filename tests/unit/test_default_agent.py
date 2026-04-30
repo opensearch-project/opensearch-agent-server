@@ -18,6 +18,7 @@ from strands import Skill
 
 from agents import default_agent
 from agents.default_agent import (
+    _DEFAULT_BEDROCK_MODEL_ID,
     LoggingAgentSkills,
     _load_all_skills,
     create_default_agent,
@@ -218,3 +219,55 @@ class TestLoggingAgentSkills:
         call_args = mock_agent.state.set.call_args
         assert call_args.args[0] == "agent_skills"
         assert call_args.args[1] == {"activated_skills": ["my-skill"]}
+
+
+@pytest.mark.usefixtures("patch_mcp")
+class TestDefaultAgentModelSelection:
+    """Group 4 — Bedrock model selection via ``BEDROCK_INFERENCE_PROFILE_ARN``.
+
+    Regression coverage for issue #94: the default agent must respect the
+    ``BEDROCK_INFERENCE_PROFILE_ARN`` env var and fall back to the documented
+    Strands default when it is unset.
+    """
+
+    def test_uses_inference_profile_arn_from_env(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When ``BEDROCK_INFERENCE_PROFILE_ARN`` is set, the agent uses that ARN."""
+        test_arn = (
+            "arn:aws:bedrock:eu-west-1:123456789012:inference-profile/"
+            "eu.anthropic.claude-haiku-4-5-20251001-v1:0"
+        )
+        monkeypatch.setenv("BEDROCK_INFERENCE_PROFILE_ARN", test_arn)
+
+        with (
+            patch("agents.default_agent._load_all_skills", return_value=[]),
+            patch("agents.default_agent.BedrockModel") as mock_bedrock_cls,
+            patch("agents.default_agent._get_aws_session") as mock_session_fn,
+        ):
+            create_default_agent("http://localhost:9200")
+
+        mock_bedrock_cls.assert_called_once_with(
+            model_id=test_arn,
+            boto_session=mock_session_fn.return_value,
+            streaming=True,
+        )
+
+    def test_falls_back_to_default_when_env_var_unset(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When ``BEDROCK_INFERENCE_PROFILE_ARN`` is unset, falls back to default."""
+        monkeypatch.delenv("BEDROCK_INFERENCE_PROFILE_ARN", raising=False)
+
+        with (
+            patch("agents.default_agent._load_all_skills", return_value=[]),
+            patch("agents.default_agent.BedrockModel") as mock_bedrock_cls,
+            patch("agents.default_agent._get_aws_session") as mock_session_fn,
+        ):
+            create_default_agent("http://localhost:9200")
+
+        mock_bedrock_cls.assert_called_once_with(
+            model_id=_DEFAULT_BEDROCK_MODEL_ID,
+            boto_session=mock_session_fn.return_value,
+            streaming=True,
+        )

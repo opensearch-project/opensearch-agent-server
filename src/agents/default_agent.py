@@ -9,9 +9,11 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+import boto3
 import httpx
 from mcp.client.streamable_http import streamable_http_client
 from strands import Agent, AgentSkills, Skill
+from strands.models import BedrockModel
 from strands.tools.mcp import MCPClient
 
 from server.constants import DEFAULT_MCP_SERVER_URL
@@ -19,6 +21,24 @@ from utils.logging_helpers import get_logger, log_info_event
 from utils.obo_context import OboAuth
 
 logger = get_logger(__name__)
+
+# Default Bedrock model — same as Strands SDK default.
+# Used when BEDROCK_INFERENCE_PROFILE_ARN is not explicitly set.
+_DEFAULT_BEDROCK_MODEL_ID = "us.anthropic.claude-sonnet-4-20250514-v1:0"
+
+
+def _get_aws_session() -> boto3.Session:
+    """Create a boto3 session using the default AWS credential provider chain."""
+    return boto3.Session()
+
+
+def _create_default_agent_model(inference_profile_arn: str) -> BedrockModel:
+    """Create a BedrockModel for the default agent."""
+    return BedrockModel(
+        model_id=inference_profile_arn,
+        boto_session=_get_aws_session(),
+        streaming=True,
+    )
 
 
 class LoggingAgentSkills(AgentSkills):
@@ -172,8 +192,22 @@ def create_default_agent(opensearch_url: str) -> Agent:
             skill_names=[s.name for s in skills],
         )
 
+    # Read Bedrock inference profile from env var, falling back to Strands default.
+    # Using a local variable (not os.environ mutation) — the default agent has no
+    # sub-agents that need to observe this fallback.
+    inference_profile_arn = os.getenv(
+        "BEDROCK_INFERENCE_PROFILE_ARN", _DEFAULT_BEDROCK_MODEL_ID
+    )
+    log_info_event(
+        logger,
+        f"Default agent using Bedrock inference profile: {inference_profile_arn}",
+        "default_agent.bedrock_model",
+        inference_profile_arn=inference_profile_arn,
+    )
+
     # Create agent with MCP tools and skills plugin
     agent = Agent(
+        model=_create_default_agent_model(inference_profile_arn),
         system_prompt=DEFAULT_SYSTEM_PROMPT,
         tools=tools,
         plugins=plugins,
