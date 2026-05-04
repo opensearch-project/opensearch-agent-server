@@ -4,6 +4,7 @@
 ### Added
 - PPL reference skill and skills auto-discovery for the default agent
 ### Fixed
+- Default agent now reliably activates the `ppl-reference` skill before calling query-language tools, via a tool-coupled rule in the system prompt
 ### Removed
 
 ## [0.2.0] - 2026-04-10
