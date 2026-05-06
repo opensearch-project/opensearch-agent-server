@@ -98,7 +98,39 @@ OLLAMA_MODEL=llama3
 # Logging
 AG_UI_LOG_FORMAT=human
 AG_UI_LOG_LEVEL=INFO
+
+# Optional: additional skill paths (colon-separated, PATH-style).
+# If unset, the agent also auto-discovers skills in
+# ~/.config/opensearch-agent-server/skills/ when that directory exists.
+AG_UI_SKILL_PATHS=/path/to/skills-a:/path/to/skills-b
 ```
+
+### Loading additional skills
+
+The default agent ships with bundled skills (e.g., `ppl-reference`). You can also load skills from external open-source registries such as [`opensearch-project/opensearch-agent-skills`](https://github.com/opensearch-project/opensearch-agent-skills) without forking this repo.
+
+Two ways to add external skills:
+
+**1. Default location (zero config):** clone into `~/.config/opensearch-agent-server/skills/`.
+
+```bash
+git clone https://github.com/opensearch-project/opensearch-agent-skills.git \
+  ~/.config/opensearch-agent-server/skills/opensearch-agent-skills
+```
+
+**2. Custom paths:** set `AG_UI_SKILL_PATHS` to one or more directories (colon-separated, like `PATH`). When set, the default location is not scanned.
+
+```bash
+export AG_UI_SKILL_PATHS=/opt/team-skills:/opt/official-skills
+```
+
+**Verify skills loaded:**
+
+```bash
+tail -f agent-quickstart/.logs/agent-server.log | grep skill_loader
+```
+
+You should see one `skill_loader.loaded` event per skill found.
 
 ## Quick Start
 

@@ -102,7 +102,7 @@ include = ["src/"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/server", "src/orchestrator", "src/agents", "src/utils", "src/tools"]
-artifacts = ["src/server/*.yml"]
+artifacts = ["src/server/*.yml", "src/agents/skills/**/*.md"]
 
 [tool.hatch.build.targets.wheel.sources]
 "src" = ""

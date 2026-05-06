@@ -7,13 +7,13 @@ Handles general queries when no specialized sub-agent matches the page context.
 from __future__ import annotations
 
 import os
-from pathlib import Path
 
 import httpx
 from mcp.client.streamable_http import streamable_http_client
-from strands import Agent, AgentSkills, Skill
+from strands import Agent, AgentSkills
 from strands.tools.mcp import MCPClient
 
+from agents.skill_loader import load_all_skills
 from server.constants import DEFAULT_MCP_SERVER_URL
 from utils.logging_helpers import get_logger, log_info_event
 from utils.obo_context import OboAuth
@@ -50,9 +50,18 @@ You have access to OpenSearch tools via the MCP Server. Use them to answer quest
 - Cluster settings and configuration
 - Node and shard information
 
-You also have access to domain-specific skills that provide reference documentation
-and guidance for specialized tasks. Consult available skills when users need help
-with specific OpenSearch features or query languages.
+You also have access to domain-specific skills listed in <available_skills>.
+Each skill's description states when to use it. Before answering any question,
+scan the skill descriptions in <available_skills> to see if the user's request matches one. If it
+does, activate the matching skill via the `skills` tool first.
+
+The Dashboards UI lets users pick a query language (PPL, SQL, DSL, etc.).
+Respect the user's selection — use whichever language the context implies, do
+not override their choice. Before calling any tool that runs a query language
+(such as PPL, SQL, or DSL), first look in <available_skills> for a matching
+reference skill and activate it via the `skills` tool. Your training knowledge
+of these query languages is often wrong or outdated — the skill contains the
+authoritative syntax.
 
 When answering:
 - Use the available tools to fetch real data from OpenSearch
@@ -61,55 +70,6 @@ When answering:
 - If you don't have the right tool for a request, explain what's available
 - Consult available skills for specialized guidance and reference documentation
 """
-
-
-def _load_all_skills() -> list[Skill]:
-    """Auto-discover and load all skills from the skills directory.
-
-    Scans ``skills/`` at the project root for subdirectories containing
-    a ``SKILL.md`` file. Each valid skill directory is loaded using the
-    Strands SDK ``Skill.from_file()`` method.
-
-    Returns:
-        List of loaded Skill objects. Invalid or missing skills are
-        skipped with a warning log.
-    """
-    project_root = Path(__file__).parent.parent.parent
-    skills_dir = project_root / "skills"
-
-    if not skills_dir.exists():
-        log_info_event(
-            logger,
-            f"Skills directory not found at {skills_dir}, skipping skill loading",
-            "default_agent.skills_dir_not_found",
-            skills_dir=str(skills_dir),
-        )
-        return []
-
-    skills = []
-    for skill_path in sorted(skills_dir.iterdir()):
-        if not skill_path.is_dir() or not (skill_path / "SKILL.md").exists():
-            continue
-        try:
-            skill = Skill.from_file(skill_path)
-            skills.append(skill)
-            log_info_event(
-                logger,
-                f"Loaded skill: {skill.name}",
-                "default_agent.skill_loaded",
-                skill_name=skill.name,
-                skill_path=str(skill_path),
-            )
-        except Exception as e:
-            log_info_event(
-                logger,
-                f"Failed to load skill at {skill_path}: {e}",
-                "default_agent.skill_load_failed",
-                skill_path=str(skill_path),
-                error=str(e),
-            )
-
-    return skills
 
 
 def create_default_agent(opensearch_url: str) -> Agent:
@@ -156,8 +116,8 @@ def create_default_agent(opensearch_url: str) -> Agent:
 
     tools = list(mcp_client.list_tools_sync())
 
-    # Auto-discover and load all skills from skills/ directory
-    skills = _load_all_skills()
+    # Discover bundled + user-configured skills.
+    skills = load_all_skills()
 
     # Prepare plugins list with AgentSkills if skills are available
     plugins = []
