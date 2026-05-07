@@ -12,6 +12,9 @@ OpenSearch Agent Server enables intelligent agent-based interactions within Open
 - **Flexible LLM Support** — Works with AWS Bedrock, Ollama, or other LLM providers
 - **Production Ready** — Includes authentication, rate limiting, error recovery, and observability
 
+## Demo
+https://github.com/user-attachments/assets/d465d805-40c9-4158-8e4b-0805c675df45
+
 ## Architecture
 
 ```
