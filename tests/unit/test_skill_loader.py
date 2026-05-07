@@ -2,11 +2,19 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
 
 from agents.skill_loader import _ENV_VAR, load_all_skills
+
+
+def _set_fake_home(monkeypatch: pytest.MonkeyPatch, home: Path) -> None:
+    """Point ~ at a test-controlled location on both POSIX and Windows."""
+    monkeypatch.setenv("HOME", str(home))
+    # Windows expanduser() uses USERPROFILE, not HOME.
+    monkeypatch.setenv("USERPROFILE", str(home))
 
 
 def _write_skill(skill_dir: Path, name: str, description: str | None = None) -> None:
@@ -33,7 +41,7 @@ def bundled_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(
         "agents.skill_loader._bundled_skills_path", lambda: fake_bundled
     )
-    monkeypatch.setenv("HOME", str(tmp_path / "scratch-home"))
+    _set_fake_home(monkeypatch, tmp_path / "scratch-home")
     monkeypatch.delenv(_ENV_VAR, raising=False)
     return fake_bundled
 
@@ -60,7 +68,7 @@ class TestBundledOnly:
         monkeypatch.setattr(
             "agents.skill_loader._bundled_skills_path", lambda: None
         )
-        monkeypatch.setenv("HOME", str(tmp_path / "scratch-home"))
+        _set_fake_home(monkeypatch, tmp_path / "scratch-home")
         monkeypatch.delenv(_ENV_VAR, raising=False)
 
         skills = load_all_skills()
@@ -69,7 +77,7 @@ class TestBundledOnly:
 
 
 class TestEnvVarPaths:
-    """AG_UI_SKILL_PATHS — colon-separated paths."""
+    """AG_UI_SKILL_PATHS — os.pathsep-separated paths (POSIX ``:``, Windows ``;``)."""
 
     def test_single_path_loads(
         self, bundled_dir: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -89,7 +97,7 @@ class TestEnvVarPaths:
         dir_b = tmp_path / "skills-b"
         _write_skill(dir_a / "alpha", "alpha")
         _write_skill(dir_b / "beta", "beta")
-        monkeypatch.setenv(_ENV_VAR, f"{dir_a}:{dir_b}")
+        monkeypatch.setenv(_ENV_VAR, f"{dir_a}{os.pathsep}{dir_b}")
 
         skills = load_all_skills()
 
@@ -110,8 +118,8 @@ class TestEnvVarPaths:
     def test_tilde_expansion(
         self, bundled_dir: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """~/foo in the env var expands via $HOME."""
-        monkeypatch.setenv("HOME", str(tmp_path))
+        """~/foo in the env var expands to the user's home dir."""
+        _set_fake_home(monkeypatch, tmp_path)
         _write_skill(tmp_path / "home-skills" / "delta", "delta")
         monkeypatch.setenv(_ENV_VAR, "~/home-skills")
 
@@ -122,10 +130,11 @@ class TestEnvVarPaths:
     def test_empty_entries_are_ignored(
         self, bundled_dir: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Leading/trailing/double colons shouldn't confuse the parser."""
+        """Leading/trailing/double separators shouldn't confuse the parser."""
         user_skills = tmp_path / "user-skills"
         _write_skill(user_skills / "gamma", "gamma")
-        monkeypatch.setenv(_ENV_VAR, f":{user_skills}::")
+        sep = os.pathsep
+        monkeypatch.setenv(_ENV_VAR, f"{sep}{user_skills}{sep}{sep}")
 
         skills = load_all_skills()
 
@@ -153,7 +162,7 @@ class TestEnvVarPaths:
         user_skills = tmp_path / "user-skills"
         _write_skill(user_skills / "beta", "beta")
         missing = tmp_path / "does-not-exist"
-        monkeypatch.setenv(_ENV_VAR, f"{user_skills}:{missing}")
+        monkeypatch.setenv(_ENV_VAR, f"{user_skills}{os.pathsep}{missing}")
 
         skills = load_all_skills()
 
@@ -168,7 +177,7 @@ class TestDefaultUserDir:
     ) -> None:
         fake_home = tmp_path / "fake-home"
         fake_home.mkdir()
-        monkeypatch.setenv("HOME", str(fake_home))
+        _set_fake_home(monkeypatch, fake_home)
         default_dir = fake_home / ".config" / "opensearch-agent-server" / "skills"
         _write_skill(default_dir / "default-skill", "default-skill")
 
@@ -182,7 +191,7 @@ class TestDefaultUserDir:
         """When env var is set, default dir is NOT also scanned."""
         fake_home = tmp_path / "fake-home"
         fake_home.mkdir()
-        monkeypatch.setenv("HOME", str(fake_home))
+        _set_fake_home(monkeypatch, fake_home)
         default_dir = fake_home / ".config" / "opensearch-agent-server" / "skills"
         _write_skill(default_dir / "default-skill", "default-skill")
 
@@ -203,7 +212,7 @@ class TestDefaultUserDir:
         # fake-home exists but has no .config/opensearch-agent-server/skills dir.
         fake_home = tmp_path / "fake-home"
         fake_home.mkdir()
-        monkeypatch.setenv("HOME", str(fake_home))
+        _set_fake_home(monkeypatch, fake_home)
 
         skills = load_all_skills()
 

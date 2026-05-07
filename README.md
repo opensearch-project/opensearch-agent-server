@@ -118,7 +118,7 @@ git clone https://github.com/opensearch-project/opensearch-agent-skills.git \
   ~/.config/opensearch-agent-server/skills/opensearch-agent-skills
 ```
 
-**2. Custom paths:** set `AG_UI_SKILL_PATHS` to one or more directories (colon-separated, like `PATH`). When set, the default location is not scanned.
+**2. Custom paths:** set `AG_UI_SKILL_PATHS` to one or more directories, separated like `PATH` (`:` on POSIX, `;` on Windows). When set, the default location is not scanned.
 
 ```bash
 export AG_UI_SKILL_PATHS=/opt/team-skills:/opt/official-skills

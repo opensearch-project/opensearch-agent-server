@@ -7,8 +7,9 @@ Loads skills from two layers:
    installs (``pip install -e .``) and wheel installs
    (``pip install opensearch-agent-server``).
 2. User skills — either a list of paths in the ``AG_UI_SKILL_PATHS`` env
-   var (colon-separated, PATH-style), or, if that's unset, the default
-   location ``~/.config/opensearch-agent-server/skills/``.
+   var (``os.pathsep``-separated, PATH-style: ``:`` on POSIX, ``;`` on
+   Windows), or, if that's unset, the default location
+   ``~/.config/opensearch-agent-server/skills/``.
 
 First-seen-wins deduplication by skill name: bundled skills take precedence
 over user skills, so a user cannot silently override a skill this repo
@@ -123,15 +124,18 @@ def _load_user_configured_paths() -> list[Path]:
     """Return user skill paths.
 
     Priority:
-    1. If ``AG_UI_SKILL_PATHS`` is set, return its colon-separated entries.
+    1. If ``AG_UI_SKILL_PATHS`` is set, return its entries (split on
+       ``os.pathsep``: ``:`` on POSIX, ``;`` on Windows).
     2. Otherwise, return the default user skills dir if it exists.
     3. Otherwise, return an empty list.
     """
     env_value = os.environ.get(_ENV_VAR)
     if env_value:
+        # os.pathsep is ":" on POSIX, ";" on Windows.
+        # Needed because Windows paths contain ":" (e.g. C:\path).
         return [
             Path(entry).expanduser().resolve()
-            for entry in env_value.split(":")
+            for entry in env_value.split(os.pathsep)
             if entry.strip()
         ]
 
