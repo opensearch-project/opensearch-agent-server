@@ -3,7 +3,7 @@
 ## [Unreleased]
 ### Added
 - PPL reference skill and skills auto-discovery for the default agent
-- Load additional skills from `~/.config/opensearch-agent-server/skills/` (default) or any paths set in the `AG_UI_SKILL_PATHS` env var (colon-separated, PATH-style)
+- Load additional skills from `~/.config/opensearch-agent-server/skills/` (default) or any paths set in the `AG_UI_SKILL_PATHS` env var (PATH-style: `:`-separated on POSIX, `;`-separated on Windows)
 ### Fixed
 - Bundled skills (`ppl-reference`) are now included in the pip wheel — previously only available from git clones
 ### Removed

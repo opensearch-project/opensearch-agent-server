@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 
 import pytest
 
+from agents import skill_loader
 from agents.skill_loader import _ENV_VAR, load_all_skills
 
 
@@ -65,15 +67,35 @@ class TestBundledOnly:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """If bundled path returns None, loader returns []."""
-        monkeypatch.setattr(
-            "agents.skill_loader._bundled_skills_path", lambda: None
-        )
+        monkeypatch.setattr("agents.skill_loader._bundled_skills_path", lambda: None)
         _set_fake_home(monkeypatch, tmp_path / "scratch-home")
         monkeypatch.delenv(_ENV_VAR, raising=False)
 
         skills = load_all_skills()
 
         assert skills == []
+
+    def test_none_bundled_path_and_missing_user_dir_is_silent_no_op(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """When _bundled_skills_path() returns None, it contributes no path
+        to search — so we should NOT see a path_missing event for it, and
+        the loader should simply return []."""
+        monkeypatch.setattr("agents.skill_loader._bundled_skills_path", lambda: None)
+        _set_fake_home(monkeypatch, tmp_path / "scratch-home")
+        monkeypatch.delenv(_ENV_VAR, raising=False)
+
+        with caplog.at_level(logging.INFO, logger=skill_loader.logger.name):
+            skills = load_all_skills()
+
+        assert skills == []
+        assert not any(
+            getattr(r, "event", None) == "skill_loader.path_missing"
+            for r in caplog.records
+        )
 
 
 class TestEnvVarPaths:
@@ -168,6 +190,25 @@ class TestEnvVarPaths:
 
         assert [s.name for s in skills] == ["beta"]
 
+    def test_semicolon_separator_when_os_pathsep_is_semicolon(
+        self, bundled_dir: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Simulates Windows: os.pathsep=';' must split on ';' not ':'.
+
+        Regression guard for the original hardcoded-':' bug that broke
+        Windows CI.
+        """
+        dir_a = tmp_path / "skills-a"
+        dir_b = tmp_path / "skills-b"
+        _write_skill(dir_a / "alpha", "alpha")
+        _write_skill(dir_b / "beta", "beta")
+        monkeypatch.setattr(os, "pathsep", ";")
+        monkeypatch.setenv(_ENV_VAR, f"{dir_a};{dir_b}")
+
+        skills = load_all_skills()
+
+        assert sorted(s.name for s in skills) == ["alpha", "beta"]
+
 
 class TestDefaultUserDir:
     """Falls back to ~/.config/opensearch-agent-server/skills/ when env var unset."""
@@ -234,6 +275,32 @@ class TestCollisions:
 
         assert len(skills) == 1
         assert skills[0].description == "Bundled"
+
+    def test_duplicate_emits_warning_log_with_skill_name(
+        self,
+        bundled_dir: Path,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Operators rely on `skill_loader.duplicate` at WARN to find shadowed
+        user skills. Keep the event code and level stable."""
+        _write_skill(bundled_dir / "shared", "shared", description="Bundled")
+        user_skills = tmp_path / "user-skills"
+        _write_skill(user_skills / "shared", "shared", description="User")
+        monkeypatch.setenv(_ENV_VAR, str(user_skills))
+
+        with caplog.at_level(logging.WARNING, logger=skill_loader.logger.name):
+            load_all_skills()
+
+        duplicate_records = [
+            r
+            for r in caplog.records
+            if getattr(r, "event", None) == "skill_loader.duplicate"
+        ]
+        assert duplicate_records, "expected a skill_loader.duplicate log event"
+        assert duplicate_records[0].levelno == logging.WARNING
+        assert getattr(duplicate_records[0], "skill_name", None) == "shared"
 
 
 class TestFailureModes:

@@ -132,6 +132,8 @@ tail -f agent-quickstart/.logs/agent-server.log | grep skill_loader
 
 You should see one `skill_loader.loaded` event per skill found.
 
+**Name collisions:** if a user skill has the same `name:` (in its `SKILL.md` frontmatter) as a bundled skill, the bundled version wins and the user version is skipped — logged as `skill_loader.duplicate` at WARN level. To override, rename your skill's `name` field to something unique.
+
 ## Quick Start
 
 ```bash

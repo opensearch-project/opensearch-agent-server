@@ -71,7 +71,7 @@ def load_all_skills() -> list[Skill]:
             try:
                 skill = Skill.from_file(skill_md.parent)
             except Exception as e:
-                log_info_event(
+                log_warning_event(
                     logger,
                     f"Failed to load skill at {skill_md}: {e}",
                     "skill_loader.load_failed",
