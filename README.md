@@ -129,6 +129,14 @@ If you already have an OpenSearch cluster running and don't need the full quicks
 pip install opensearch-agent-server
 ```
 
+> **Note:** the `opensearch-agent-server` CLI entry point described below is available in **v0.2.1 and later**. If `pip install opensearch-agent-server` currently gives you v0.2.0, the `opensearch-agent-server` command will not be installed. Until v0.2.1 is published to PyPI, install from the `main` branch instead:
+>
+> ```bash
+> pip install git+https://github.com/opensearch-project/opensearch-agent-server.git
+> ```
+>
+> You can verify which version you got with `pip show opensearch-agent-server | grep Version`.
+
 Configure your environment:
 
 ```bash
