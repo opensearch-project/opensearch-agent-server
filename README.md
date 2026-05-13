@@ -99,10 +99,12 @@ OLLAMA_MODEL=llama3
 AG_UI_LOG_FORMAT=human
 AG_UI_LOG_LEVEL=INFO
 
-# Optional: additional skill paths (colon-separated, PATH-style).
-# If unset, the agent also auto-discovers skills in
-# ~/.config/opensearch-agent-server/skills/ when that directory exists.
-AG_UI_SKILL_PATHS=/path/to/skills-a:/path/to/skills-b
+# Optional: additional skill paths. Use your OS's PATH separator
+# (`:` on macOS/Linux, `;` on Windows). If unset, the agent auto-discovers
+# skills in ~/.config/opensearch-agent-server/skills/ when that directory exists.
+# NOTE: setting this disables the default location — include it explicitly
+# if you still want those skills loaded.
+# AG_UI_SKILL_PATHS=/path/to/skills-a:/path/to/skills-b
 ```
 
 ### Loading additional skills
@@ -133,6 +135,8 @@ tail -f agent-quickstart/.logs/agent-server.log | grep skill_loader
 You should see one `skill_loader.loaded` event per skill found.
 
 **Name collisions:** if a user skill has the same `name:` (in its `SKILL.md` frontmatter) as a bundled skill, the bundled version wins and the user version is skipped — logged as `skill_loader.duplicate` at WARN level. To override, rename your skill's `name` field to something unique.
+
+**Trust model:** skill files become part of the system prompt the LLM sees, so loading a skill is effectively trusting its author. Only point `AG_UI_SKILL_PATHS` at directories you control. The default `~/.config/opensearch-agent-server/skills/` is per-user and fine for single-user setups, but is inappropriate on shared or multi-tenant hosts — on those deployments, use an operator-controlled directory that end users cannot write to.
 
 ## Quick Start
 

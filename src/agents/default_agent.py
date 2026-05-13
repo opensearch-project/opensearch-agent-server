@@ -59,9 +59,9 @@ The Dashboards UI lets users pick a query language (DQL, Lucene, PPL, or
 OpenSearch SQL). Respect the user's selection — use whichever language the
 context implies, do not override their choice. Before calling any tool that
 runs a query language, first look in <available_skills> for a matching
-reference skill and activate it via the `skills` tool. Your training knowledge
-of these query languages is often wrong or outdated — the skill contains the
-authoritative syntax.
+reference skill and activate it via the `skills` tool. The skill is more
+authoritative than your training data — prefer it when it covers the
+construct you need.
 
 When answering:
 - Use the available tools to fetch real data from OpenSearch

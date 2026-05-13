@@ -33,7 +33,7 @@ def _write_skill(skill_dir: Path, name: str, description: str | None = None) -> 
 def bundled_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Isolated bundled-skills directory + isolated HOME.
 
-    Redirects ``_bundled_skills_path`` to a fresh tmp dir so tests don't
+    Redirects ``_bundled_skills_resource`` to a fresh tmp dir so tests don't
     load the real bundled skills. Also points HOME at a scratch directory
     so the default ``~/.config/opensearch-agent-server/skills/`` location
     doesn't accidentally pick up the developer's real user skills.
@@ -41,7 +41,7 @@ def bundled_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     fake_bundled = tmp_path / "bundled"
     fake_bundled.mkdir()
     monkeypatch.setattr(
-        "agents.skill_loader._bundled_skills_path", lambda: fake_bundled
+        "agents.skill_loader._bundled_skills_resource", lambda: fake_bundled
     )
     _set_fake_home(monkeypatch, tmp_path / "scratch-home")
     monkeypatch.delenv(_ENV_VAR, raising=False)
@@ -67,7 +67,7 @@ class TestBundledOnly:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """If bundled path returns None, loader returns []."""
-        monkeypatch.setattr("agents.skill_loader._bundled_skills_path", lambda: None)
+        monkeypatch.setattr("agents.skill_loader._bundled_skills_resource", lambda: None)
         _set_fake_home(monkeypatch, tmp_path / "scratch-home")
         monkeypatch.delenv(_ENV_VAR, raising=False)
 
@@ -81,10 +81,10 @@ class TestBundledOnly:
         monkeypatch: pytest.MonkeyPatch,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """When _bundled_skills_path() returns None, it contributes no path
+        """When _bundled_skills_resource() returns None, it contributes no path
         to search — so we should NOT see a path_missing event for it, and
         the loader should simply return []."""
-        monkeypatch.setattr("agents.skill_loader._bundled_skills_path", lambda: None)
+        monkeypatch.setattr("agents.skill_loader._bundled_skills_resource", lambda: None)
         _set_fake_home(monkeypatch, tmp_path / "scratch-home")
         monkeypatch.delenv(_ENV_VAR, raising=False)
 

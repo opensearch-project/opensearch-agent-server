@@ -23,7 +23,7 @@ external-skill misconfiguration.
 from __future__ import annotations
 
 import os
-from importlib.resources import files
+from importlib.resources import as_file, files
 from pathlib import Path
 
 from strands import Skill
@@ -46,77 +46,114 @@ def load_all_skills() -> list[Skill]:
         name; the first occurrence wins, so bundled skills take precedence
         over user skills.
     """
-    search_paths: list[Path] = []
-
-    bundled = _bundled_skills_path()
-    if bundled is not None:
-        search_paths.append(bundled)
-
-    search_paths.extend(_load_user_configured_paths())
-
     skills: list[Skill] = []
     seen_names: set[str] = set()
 
-    for root in search_paths:
-        if not root.exists():
-            log_info_event(
-                logger,
-                f"Skill path not present, skipping: {root}",
-                "skill_loader.path_missing",
-                skill_path=str(root),
-            )
-            continue
+    # Bundled skills. ``as_file()`` extracts to a temp dir if the package
+    # is imported from a zipped wheel, so rglob works regardless of
+    # packaging. The context manager cleans up the temp dir after we
+    # finish scanning.
+    bundled_resource = _bundled_skills_resource()
+    if bundled_resource is not None:
+        with as_file(bundled_resource) as bundled_path:
+            _collect_skills_from_root(bundled_path, skills, seen_names)
 
-        for skill_md in root.rglob("SKILL.md"):
-            try:
-                skill = Skill.from_file(skill_md.parent)
-            except Exception as e:
-                log_warning_event(
-                    logger,
-                    f"Failed to load skill at {skill_md}: {e}",
-                    "skill_loader.load_failed",
-                    skill_path=str(skill_md),
-                    error=str(e),
-                )
-                continue
-
-            if skill.name in seen_names:
-                log_warning_event(
-                    logger,
-                    f"Duplicate skill name '{skill.name}': keeping the earlier "
-                    f"version, skipping {skill_md}. To use this version instead, "
-                    f"rename its 'name' field in the frontmatter.",
-                    "skill_loader.duplicate",
-                    skill_name=skill.name,
-                    skill_path=str(skill_md),
-                )
-                continue
-
-            seen_names.add(skill.name)
-            skills.append(skill)
-            log_info_event(
-                logger,
-                f"Loaded skill: {skill.name}",
-                "skill_loader.loaded",
-                skill_name=skill.name,
-                skill_path=str(skill_md),
-            )
+    # User-configured skills.
+    for root in _load_user_configured_paths():
+        _collect_skills_from_root(root, skills, seen_names)
 
     return skills
 
 
-def _bundled_skills_path() -> Path | None:
-    """Return the filesystem path to the bundled skills directory.
+def _collect_skills_from_root(
+    root: Path, skills: list[Skill], seen_names: set[str]
+) -> None:
+    """Scan ``root`` for ``SKILL.md`` files and append new skills to the list.
+
+    Mutates ``skills`` and ``seen_names`` in place so bundled-then-user
+    dedup works across calls. Skips common non-skill directories (``.git``,
+    ``node_modules``, hidden dotdirs, etc.) to avoid walking large unrelated
+    trees when a user points ``AG_UI_SKILL_PATHS`` at a git repo root.
+    """
+    if not root.exists():
+        log_info_event(
+            logger,
+            f"Skill path not present, skipping: {root}",
+            "skill_loader.path_missing",
+            skill_path=str(root),
+        )
+        return
+
+    for skill_md in root.rglob("SKILL.md"):
+        if _is_in_ignored_dir(skill_md, root):
+            continue
+
+        try:
+            skill = Skill.from_file(skill_md.parent)
+        except Exception as e:
+            log_warning_event(
+                logger,
+                f"Failed to load skill at {skill_md}: {e}",
+                "skill_loader.load_failed",
+                skill_path=str(skill_md),
+                error=str(e),
+            )
+            continue
+
+        if skill.name in seen_names:
+            log_warning_event(
+                logger,
+                f"Duplicate skill name '{skill.name}': keeping the earlier "
+                f"version, skipping {skill_md}. To use this version instead, "
+                f"rename its 'name' field in the frontmatter.",
+                "skill_loader.duplicate",
+                skill_name=skill.name,
+                skill_path=str(skill_md),
+            )
+            continue
+
+        seen_names.add(skill.name)
+        skills.append(skill)
+        log_info_event(
+            logger,
+            f"Loaded skill: {skill.name}",
+            "skill_loader.loaded",
+            skill_name=skill.name,
+            skill_path=str(skill_md),
+        )
+
+
+# Directory names rglob should skip when searching for SKILL.md files.
+# Anything in this set, plus any dotdir (".git", ".cache", ...), is
+# excluded. Applied only to path components *below* the skill root so we
+# don't reject a skill root itself when it happens to be named ".skills".
+_IGNORED_DIR_NAMES = frozenset({"node_modules", "__pycache__", ".venv"})
+
+
+def _is_in_ignored_dir(skill_md: Path, root: Path) -> bool:
+    """Return True if any path component between ``root`` and ``skill_md``
+    is a dotdir or in the ignored-name set."""
+    try:
+        relative = skill_md.relative_to(root)
+    except ValueError:
+        return False
+    for part in relative.parts[:-1]:  # exclude the file name itself
+        if part.startswith(".") or part in _IGNORED_DIR_NAMES:
+            return True
+    return False
+
+
+def _bundled_skills_resource():
+    """Return the bundled skills ``Traversable``, or ``None`` if missing.
 
     Uses :mod:`importlib.resources` so bundled skills are discoverable for
-    both editable installs and wheel installs. Returns ``None`` if the
-    resource can't be located (shouldn't happen in a correctly-packaged
-    install; present as a safety net).
+    both editable installs and wheel installs (including zipped wheels).
+    The returned object must be passed to :func:`importlib.resources.as_file`
+    to get a usable filesystem path.
     """
     try:
-        resource = files(_BUNDLED_SKILLS_PACKAGE) / _BUNDLED_SKILLS_RESOURCE
-        return Path(str(resource))
-    except (ModuleNotFoundError, FileNotFoundError):
+        return files(_BUNDLED_SKILLS_PACKAGE) / _BUNDLED_SKILLS_RESOURCE
+    except (ModuleNotFoundError, FileNotFoundError, TypeError, OSError):
         return None
 
 
