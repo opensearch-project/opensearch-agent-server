@@ -7,6 +7,9 @@ on:
       - reopened
       - transferred
 
+permissions:
+  issues: write
+
 jobs:
   apply-label:
     runs-on: ubuntu-latest
