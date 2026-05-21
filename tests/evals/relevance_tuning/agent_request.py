@@ -71,7 +71,7 @@ async def call_api(prompt: str, options: dict, context: dict) -> dict:
         url,
         json=data,
         stream=True,
-        auth=(OS_USERNAME if OS_USERNAME else '', OS_PASSWORD if OS_PASSWORD else ''),
+        auth=(OS_USERNAME, OS_PASSWORD) if (OS_USERNAME and OS_PASSWORD) else None,
         headers={"Host": AG_UI_HOST, "Connection": "keep-alive"}
     )
     status_code = response.status_code
