@@ -40,9 +40,7 @@ def _registration(
     )
 
 
-# ---------------------------------------------------------------------------
 # Register + retrieve by page context
-# ---------------------------------------------------------------------------
 
 
 def test_register_and_retrieve_by_page_context() -> None:
@@ -56,6 +54,12 @@ def test_register_and_retrieve_by_page_context() -> None:
     assert resolved.name == "search-agent"
 
 
+def test_get_agent_for_unknown_context_on_empty_registry_returns_none() -> None:
+    registry = AgentRegistry()
+
+    assert registry.get_agent_for_context("does-not-exist") is None
+
+
 def test_get_agent_for_unknown_context_returns_none() -> None:
     registry = AgentRegistry()
     registry.register(_registration("search-agent", page_contexts=["search-relevance"]))
@@ -63,9 +67,7 @@ def test_get_agent_for_unknown_context_returns_none() -> None:
     assert registry.get_agent_for_context("does-not-exist") is None
 
 
-# ---------------------------------------------------------------------------
 # Multiple agents with different page contexts
-# ---------------------------------------------------------------------------
 
 
 def test_register_multiple_agents_with_different_contexts() -> None:
@@ -79,11 +81,6 @@ def test_register_multiple_agents_with_different_contexts() -> None:
     assert registry.get_agent_for_context("search-relevance") is search
     assert registry.get_agent_for_context("observability") is obs
     assert registry.get_agent_for_context("alerting") is obs
-
-
-# ---------------------------------------------------------------------------
-# Duplicate registration raises
-# ---------------------------------------------------------------------------
 
 
 def test_duplicate_agent_name_raises() -> None:
@@ -117,9 +114,7 @@ def test_duplicate_page_context_does_not_partially_register() -> None:
     assert all(a.name != "agent-b" for a in registry.list_agents())
 
 
-# ---------------------------------------------------------------------------
 # list_agents()
-# ---------------------------------------------------------------------------
 
 
 def test_list_agents_returns_all_registered() -> None:
@@ -136,9 +131,7 @@ def test_list_agents_returns_all_registered() -> None:
     assert {x.name for x in listed} == {"a", "b"}
 
 
-# ---------------------------------------------------------------------------
 # Default agent resolution
-# ---------------------------------------------------------------------------
 
 
 def test_get_default_returns_default_agent() -> None:
@@ -159,9 +152,7 @@ def test_get_default_returns_none_when_no_default_registered() -> None:
     assert registry.get_default() is None
 
 
-# ---------------------------------------------------------------------------
 # Empty page_contexts
-# ---------------------------------------------------------------------------
 
 
 def test_agent_with_empty_page_contexts_registers_cleanly() -> None:
