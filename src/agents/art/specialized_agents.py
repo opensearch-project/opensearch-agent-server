@@ -6,15 +6,13 @@ Following the "Agents as Tools" pattern with Strands SDK
 from __future__ import annotations
 
 import os
-from typing import Any
 
-import boto3
 from dotenv import load_dotenv
 from strands import Agent
-from strands.models.bedrock import BedrockModel
 from strands.tools.mcp import MCPClient
 
 from utils.logging_helpers import get_logger, log_info_event
+from utils.model_factory import create_model
 from utils.monitored_tool import monitored_tool
 # Import experimentation tools. This agent is meant to do only sanity checks,
 # so we don't need all experiment tools.
@@ -26,21 +24,12 @@ sys.path.insert(0, _src_dir)
 from tools.art.experiment_tools import (
     aggregate_experiment_results,
 )
+from tools.art.ubi_metrics_tools import compute_ubi_metrics
 
 logger = get_logger(__name__)
 
 # Load environment variables
 load_dotenv()
-
-# Create boto3 session using the default AWS credential provider chain.
-# Supports environment variables, ~/.aws/credentials, IAM roles,
-# EC2 instance profiles, ECS task roles, and temporary credentials.
-bedrock_session = boto3.Session()
-
-# create_art_agent() sets BEDROCK_INFERENCE_PROFILE_ARN / BEDROCK_HAIKU_INFERENCE_PROFILE_ARN
-# as defaults *after* this module is imported, so module-level os.getenv() would
-# always return None when the env var is not set before server start.
-# Each agent function reads the env var at call time instead.
 
 # System prompts for specialized agents
 HYPOTHESIS_GENERATOR_SYSTEM_PROMPT = """You are an expert in generating search relevance improvement hypotheses.
@@ -182,36 +171,112 @@ Your expertise includes:
 
 Your process:
 1. Understand the user's question about search behavior or engagement
-2. Analyze relevant UBI data using appropriate analytics tools:
-   - Query CTR: Click-through rates for specific queries
-   - Document CTR: Engagement rates for specific documents
-   - Query Performance: Overall metrics for top queries
-   - Engagement Rankings: Queries and documents with best/worst engagement
-3. Identify patterns and anomalies in user behavior
-4. Correlate behavior patterns with search quality issues
-5. Provide actionable insights with specific metrics and examples
+2. Discover the actual UBI index field names by fetching a sample document with SearchIndexTool
+   (size=1) from ubi_queries and ubi_events before running any metric queries.
+   Do NOT assume field names — confirm them from the real data.
+3. Retrieve pre-aggregated counts from OpenSearch using SearchIndexTool (see queries below).
+4. Pass those counts to ComputeUBIMetricsTool — NEVER compute CTR, rates, or averages yourself.
+5. Identify patterns and anomalies from the computed results.
+6. Correlate behavior patterns with search quality issues.
+7. Provide actionable insights with the exact numbers returned by ComputeUBIMetricsTool.
+
+Computing UBI metrics — required OpenSearch aggregation queries:
+
+  ALWAYS use ComputeUBIMetricsTool for all metric calculations.
+  NEVER compute CTR, zero-click rates, or any averages yourself — arithmetic errors are likely.
+
+  The query clauses in each template below are starting points. When the user specifies a
+  time window (e.g. "last 7 days"), extend every query clause with a range filter on the
+  timestamp field (confirm the field name from the sample document). Apply the same filter
+  consistently across all queries in a single metric computation so counts are comparable.
+  Example range filter to add inside a bool must clause:
+    {"range": {"<timestamp_field>": {"gte": "now-7d/d", "lte": "now/d"}}}
+
+  1. total_queries
+     Index: ubi_queries
+     Query: {"query": {"match_all": {}}, "size": 0}
+     Read:  hits.total.value
+
+  2. total_clicks
+     Index: ubi_events
+     Query: {"query": {"term": {"<action_field>": "<click_action>"}}, "size": 0}
+     Read:  hits.total.value
+     (Use the actual action field name and click action value from the sample document.)
+
+  3. queries_with_clicks  (optional — enables zero-click rate)
+     Index: ubi_events
+     Query: {
+       "size": 0,
+       "query": {"term": {"<action_field>": "<click_action>"}},
+       "aggs": {"unique_queries": {"cardinality": {"field": "query_id"}}}
+     }
+     Read:  aggregations.unique_queries.value
+
+  4. impression_buckets  (optional — enables per-query CTR breakdown)
+     Index: ubi_queries
+     Query: {
+       "size": 0,
+       "aggs": {
+         "by_query": {
+           "terms": {"field": "<user_query_field>.keyword", "size": 100}
+         }
+       }
+     }
+     Pass:  aggregations.by_query.buckets  (the array) as a JSON string
+
+  5. click_query_id_buckets  (optional — pairs with impression_buckets for per-query CTR)
+     Index: ubi_events
+     Query: {
+       "size": 0,
+       "query": {"term": {"<action_field>": "<click_action>"}},
+       "aggs": {
+         "by_query_id": {
+           "terms": {"field": "query_id", "size": 1000},
+           "aggs": {
+             "query_text": {
+               "top_hits": {"size": 1, "_source": ["<user_query_field>"]}
+             }
+           }
+         }
+       }
+     }
+     Pass:  aggregations.by_query_id.buckets  (the array) as a JSON string
+     Also pass:  query_text_field="<user_query_field>", click_query_text_agg="query_text"
 
 Relevant indexes for your job are indexes holding UBI data. If not specified otherwise, these are ubi_events
 for client-side tracked events and ubi_queries for server-side tracked events.
 Be concise, data-driven, specific with numbers, and focus on actual user behavior rather than theoretical analysis.
 Always include concrete metrics (CTR percentages, click counts, search volumes) to support your insights.
+When reporting CTR values, always use the ctr_pct field from ComputeUBIMetricsTool (e.g. "25.00%"),
+not the raw ctr decimal.
 """
 
 
 
-# Global variable to store the authenticated MCPClient so specialized agents
-# route tool calls through the same transport (and auth headers).
+# Global variable to store the authenticated MCPClient and its resolved tools.
+# Specialized agents use the resolved tools (not the MCPClient directly) to
+# avoid triggering a second start() on an already-running session.
 _mcp_client: MCPClient | None = None
+_mcp_tools: list | None = None
 
 
 def set_mcp_client(mcp_client: MCPClient) -> None:
-    """Store the authenticated MCPClient for use by specialized agents."""
-    global _mcp_client
+    """Store the authenticated MCPClient and resolve its tools for sub-agents.
+
+    The MCPClient is already started by ``create_art_agent()``.  Passing it
+    directly to ``Agent(tools=[mcp_client])`` would call ``start()`` again,
+    causing "client session is currently running" errors.  Instead we resolve
+    the tools once here and pass them as a plain list to each sub-agent.
+    """
+    global _mcp_client, _mcp_tools
     _mcp_client = mcp_client
+    _mcp_tools = list(mcp_client.list_tools_sync())
     log_info_event(
         logger,
-        "[Agents] MCPClient configured for specialized agents",
+        f"[Agents] MCPClient configured for specialized agents "
+        f"({len(_mcp_tools)} tools resolved)",
         "agents.mcp_client_configured",
+        tool_count=len(_mcp_tools),
     )
 
 
@@ -229,21 +294,16 @@ async def hypothesis_agent(query: str) -> str:
     Returns:
         str: Hypothesis with reasoning and recommendations for solving the issue
     """
-    if not _mcp_client:
-        return "Error: MCPClient not configured. Please initialize MCP connection first."
+    if not _mcp_tools:
+        return "Error: MCP tools not configured. Please initialize MCP connection first."
 
     try:
-        model = BedrockModel(
-            model_id=os.getenv("BEDROCK_INFERENCE_PROFILE_ARN"),
-            boto_session=bedrock_session,
-            streaming=True,
-        )
-
-        # Create specialized agent with authenticated MCPClient and experiment tools
+        # Use resolved tools (not MCPClient directly) to avoid calling
+        # start() on an already-running session.
         agent = Agent(
-            model=model,
+            model=create_model(),
             system_prompt=HYPOTHESIS_GENERATOR_SYSTEM_PROMPT,
-            tools=[_mcp_client, aggregate_experiment_results],
+            tools=[*_mcp_tools, aggregate_experiment_results],
         )
 
         # Invoke agent and return response
@@ -273,21 +333,16 @@ async def evaluation_agent(query: str) -> str:
     Returns:
         str: Evaluation results with metrics, analysis, and recommendations
     """
-    if not _mcp_client:
-        return "Error: MCPClient not configured. Please initialize MCP connection first."
+    if not _mcp_tools:
+        return "Error: MCP tools not configured. Please initialize MCP connection first."
 
     try:
-        model = BedrockModel(
-            model_id=os.getenv("BEDROCK_INFERENCE_PROFILE_ARN"),
-            boto_session=bedrock_session,
-            streaming=True,
-        )
-
-        # Create specialized agent with authenticated MCPClient and experiment tools
+        # Use resolved tools (not MCPClient directly) to avoid calling
+        # start() on an already-running session.
         agent = Agent(
-            model=model,
+            model=create_model(),
             system_prompt=EVALUATION_AGENT_SYSTEM_PROMPT,
-            tools=[_mcp_client, aggregate_experiment_results],
+            tools=[*_mcp_tools, aggregate_experiment_results],
         )
 
         # Invoke agent and return response
@@ -317,21 +372,16 @@ async def user_behavior_analysis_agent(query: str) -> str:
     Returns:
         str: Analysis results with metrics, patterns, and actionable insights
     """
-    if not _mcp_client:
-        return "Error: MCPClient not configured. Please initialize MCP connection first."
+    if not _mcp_tools:
+        return "Error: MCP tools not configured. Please initialize MCP connection first."
 
     try:
-        model = BedrockModel(
-            model_id=os.getenv("BEDROCK_HAIKU_INFERENCE_PROFILE_ARN"),
-            boto_session=bedrock_session,
-            streaming=True,
-        )
-
-        # Create specialized agent with authenticated MCPClient
+        # Use resolved tools (not MCPClient directly) to avoid calling
+        # start() on an already-running session.
         agent = Agent(
-            model=model,
+            model=create_model(tier="small"),
             system_prompt=USER_BEHAVIOR_ANALYSIS_AGENT_SYSTEM_PROMPT,
-            tools=[_mcp_client],
+            tools=[*_mcp_tools, compute_ubi_metrics],
         )
 
         # Invoke agent and return response

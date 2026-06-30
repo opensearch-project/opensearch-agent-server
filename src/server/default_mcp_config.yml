@@ -1,0 +1,12 @@
+# Default OpenSearch MCP Server configuration bundled with opensearch-agent-server.
+#
+# Enables the full search_relevance tool category (search configurations,
+# query sets, experiments, judgment lists) plus the general-purpose index
+# tools required for the hypothesis and evaluation agents.
+#
+# Override with: opensearch-agent-server --with-mcp --mcp-config /path/to/custom.yml
+tool_filters:
+  settings:
+    allow_write: true
+  enabled_categories:
+    - search_relevance

@@ -1,0 +1,10 @@
+# OpenSearch MCP Server configuration for the Agent Server quickstart.
+#
+# Enables the full search_relevance tool category (search configurations,
+# query sets, experiments, judgment lists) plus the general-purpose index
+# tools required for the hypothesis and evaluation agents.
+tool_filters:
+  settings:
+    allow_write: true
+  enabled_categories:
+    - search_relevance

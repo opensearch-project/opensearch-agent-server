@@ -77,9 +77,10 @@ def _init_tracing() -> None:
     """Initialize OpenTelemetry tracing.
 
     Reads OTEL_EXPORTER_OTLP_ENDPOINT from the environment and configures:
-    - Strands SDK telemetry: agent invocations and tool call spans
-    - OpenInference Bedrock instrumentation: message content, tool inputs/outputs
-      in Phoenix-compatible OpenInference format
+    - Strands SDK telemetry (provider-agnostic): agent invocations, tool call
+      spans, and model invocation spans for any LLM provider.
+    - OpenInference Bedrock instrumentation (Bedrock only): enriches traces
+      with message content and tool inputs/outputs in Phoenix-compatible format.
     """
     try:
         from strands.telemetry import StrandsTelemetry
@@ -100,22 +101,27 @@ def _init_tracing() -> None:
         )
         return
 
-    try:
-        from openinference.instrumentation.bedrock import BedrockInstrumentor
+    # Bedrock-specific enrichment — adds message content and tool I/O detail
+    # to traces via OpenInference. Only applicable when using Bedrock.
+    from utils.model_factory import get_provider
 
-        BedrockInstrumentor().instrument()
-        log_info_event(
-            logger,
-            "✓ Bedrock instrumentation enabled: message content and tool I/O will appear in traces",
-            "ag_ui.bedrock_instrumentation_enabled",
-        )
-    except ImportError as e:
-        log_warning_event(
-            logger,
-            f"✗ Bedrock instrumentation not available (missing openinference-instrumentation-bedrock): {e}",
-            "ag_ui.bedrock_instrumentation_unavailable",
-            error=str(e),
-        )
+    if get_provider() == "bedrock":
+        try:
+            from openinference.instrumentation.bedrock import BedrockInstrumentor
+
+            BedrockInstrumentor().instrument()
+            log_info_event(
+                logger,
+                "✓ Bedrock instrumentation enabled: message content and tool I/O will appear in traces",
+                "ag_ui.bedrock_instrumentation_enabled",
+            )
+        except ImportError as e:
+            log_warning_event(
+                logger,
+                f"✗ Bedrock instrumentation not available (missing openinference-instrumentation-bedrock): {e}",
+                "ag_ui.bedrock_instrumentation_unavailable",
+                error=str(e),
+            )
 
 
 # Set by lifespan at startup; used by routes at request time.
@@ -360,12 +366,11 @@ def create_app(config_override: ServerConfig | None = None) -> FastAPI:
 
         context_config = StrandsAgentConfig(state_context_builder=_page_context_builder)
 
-        # Register default agent factory
+        # Register default agent factory.
+        # Auth is handled by OboAuth (contextvars) — no headers needed.
         orchestrator.register_agent_factory(
             name="default",
-            factory=lambda headers: create_default_agent(
-                opensearch_url, headers=headers
-            ),
+            factory=lambda: create_default_agent(opensearch_url),
             description="General OpenSearch assistant with MCP tools",
             config=context_config,
         )
@@ -375,12 +380,11 @@ def create_app(config_override: ServerConfig | None = None) -> FastAPI:
             "ag_ui.default_agent_factory_ready",
         )
 
-        # Register ART agent factory
+        # Register ART agent factory.
+        # Auth is handled by OboAuth (contextvars) — no headers needed.
         orchestrator.register_agent_factory(
             name="art",
-            factory=lambda headers: create_art_agent(
-                opensearch_url, headers=headers
-            ),
+            factory=lambda: create_art_agent(opensearch_url),
             description="Search Relevance Tuning agent (ART)",
             config=context_config,
         )

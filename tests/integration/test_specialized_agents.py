@@ -28,22 +28,18 @@ def mock_get_emitter() -> Generator[None, None, None]:
 
 
 @pytest.fixture(autouse=True)
-def reset_opensearch_tools() -> Generator[None, None, None]:
-    """Reset _opensearch_tools before and after each test to ensure isolation."""
+def reset_mcp_client() -> Generator[None, None, None]:
+    """Reset _mcp_client before and after each test to ensure isolation."""
     # Save original state
-    original_tools = (
-        list(specialized_agents._opensearch_tools)
-        if specialized_agents._opensearch_tools
-        else []
-    )
+    original_client = specialized_agents._mcp_client
 
     # Reset before test
-    specialized_agents._opensearch_tools = []
+    specialized_agents._mcp_client = None
 
     yield
 
     # Restore original state after test
-    specialized_agents._opensearch_tools = original_tools
+    specialized_agents._mcp_client = original_client
 
 
 @pytest.mark.integration
@@ -52,14 +48,13 @@ class TestSetOpenSearchTools:
 
     @pytest.mark.asyncio
     async def test_set_opensearch_tools(self):
-        """Test that set_opensearch_tools sets the global tools variable."""
+        """Test that set_mcp_client sets the global mcp client variable."""
         from agents.art import specialized_agents
 
-        test_tools = [MagicMock(), MagicMock()]
-        specialized_agents.set_opensearch_tools(test_tools)
+        mock_client = MagicMock()
+        specialized_agents.set_mcp_client(mock_client)
 
-        assert specialized_agents._opensearch_tools == test_tools
-        assert len(specialized_agents._opensearch_tools) == 2
+        assert specialized_agents._mcp_client == mock_client
 
 
 @pytest.mark.integration
@@ -72,13 +67,13 @@ class TestHypothesisAgent:
         # autouse fixture ensures tools are empty
         result = await specialized_agents.hypothesis_agent("test query")
 
-        assert "Error: OpenSearch tools not configured" in result
+        assert "Error: MCPClient not configured" in result
 
     @pytest.mark.asyncio
     async def test_hypothesis_agent_success(self):
         """Test that hypothesis_agent creates agent and invokes successfully."""
         # Set tools
-        specialized_agents._opensearch_tools = [MagicMock()]
+        specialized_agents._mcp_client = MagicMock()
 
         mock_agent = MagicMock()
         mock_agent.invoke_async = AsyncMock(return_value="Test hypothesis response")
@@ -92,7 +87,7 @@ class TestHypothesisAgent:
     @pytest.mark.asyncio
     async def test_hypothesis_agent_rate_limit_error(self):
         """Test that hypothesis_agent handles rate limit errors."""
-        specialized_agents._opensearch_tools = [MagicMock()]
+        specialized_agents._mcp_client = MagicMock()
 
         mock_agent = MagicMock()
         mock_agent.invoke_async = AsyncMock(
@@ -109,7 +104,7 @@ class TestHypothesisAgent:
         """Test that hypothesis_agent handles general errors."""
         from agents.art import specialized_agents
 
-        specialized_agents._opensearch_tools = [MagicMock()]
+        specialized_agents._mcp_client = MagicMock()
 
         mock_agent = MagicMock()
         mock_agent.invoke_async = AsyncMock(side_effect=Exception("General error"))
@@ -133,14 +128,14 @@ class TestEvaluationAgent:
         # autouse fixture ensures tools are empty
         result = await specialized_agents.evaluation_agent("test query")
 
-        assert "Error: OpenSearch tools not configured" in result
+        assert "Error: MCPClient not configured" in result
 
     @pytest.mark.asyncio
     async def test_evaluation_agent_success(self):
         """Test that evaluation_agent creates agent and invokes successfully."""
         from agents.art import specialized_agents
 
-        specialized_agents._opensearch_tools = [MagicMock()]
+        specialized_agents._mcp_client = MagicMock()
 
         mock_agent = MagicMock()
         mock_agent.invoke_async = AsyncMock(return_value="Test evaluation response")
@@ -156,7 +151,7 @@ class TestEvaluationAgent:
         """Test that evaluation_agent handles rate limit errors."""
         from agents.art import specialized_agents
 
-        specialized_agents._opensearch_tools = [MagicMock()]
+        specialized_agents._mcp_client = MagicMock()
 
         mock_agent = MagicMock()
         mock_agent.invoke_async = AsyncMock(
@@ -173,7 +168,7 @@ class TestEvaluationAgent:
         """Test that evaluation_agent handles general errors (non-rate-limit)."""
         from agents.art import specialized_agents
 
-        specialized_agents._opensearch_tools = [MagicMock()]
+        specialized_agents._mcp_client = MagicMock()
 
         mock_agent = MagicMock()
         mock_agent.invoke_async = AsyncMock(side_effect=Exception("General error"))
@@ -197,14 +192,14 @@ class TestUserBehaviorAnalysisAgent:
         # autouse fixture ensures tools are empty
         result = await specialized_agents.user_behavior_analysis_agent("test query")
 
-        assert "Error: OpenSearch tools not configured" in result
+        assert "Error: MCPClient not configured" in result
 
     @pytest.mark.asyncio
     async def test_user_behavior_analysis_agent_success(self):
         """Test that user_behavior_analysis_agent creates agent and invokes successfully."""
         from agents.art import specialized_agents
 
-        specialized_agents._opensearch_tools = [MagicMock()]
+        specialized_agents._mcp_client = MagicMock()
 
         mock_agent = MagicMock()
         mock_agent.invoke_async = AsyncMock(return_value="Test UBI analysis response")
@@ -220,7 +215,7 @@ class TestUserBehaviorAnalysisAgent:
         """Test that user_behavior_analysis_agent handles errors."""
         from agents.art import specialized_agents
 
-        specialized_agents._opensearch_tools = [MagicMock()]
+        specialized_agents._mcp_client = MagicMock()
 
         mock_agent = MagicMock()
         mock_agent.invoke_async = AsyncMock(side_effect=Exception("Test error"))
@@ -236,7 +231,7 @@ class TestUserBehaviorAnalysisAgent:
         """Test that user_behavior_analysis_agent handles rate limit errors."""
         from agents.art import specialized_agents
 
-        specialized_agents._opensearch_tools = [MagicMock()]
+        specialized_agents._mcp_client = MagicMock()
 
         mock_agent = MagicMock()
         mock_agent.invoke_async = AsyncMock(
@@ -260,7 +255,7 @@ class TestSpecializedAgentsErrorHandling:
         """Test hypothesis agent when tool call fails during execution."""
         from agents.art import specialized_agents
 
-        specialized_agents._opensearch_tools = [MagicMock()]
+        specialized_agents._mcp_client = MagicMock()
 
         mock_agent = MagicMock()
         # Simulate tool failure during agent invocation
@@ -287,7 +282,7 @@ class TestSpecializedAgentsErrorHandling:
 
         from agents.art import specialized_agents
 
-        specialized_agents._opensearch_tools = [MagicMock()]
+        specialized_agents._mcp_client = MagicMock()
 
         mock_agent = MagicMock()
         # Simulate timeout during agent invocation
@@ -313,7 +308,7 @@ class TestSpecializedAgentsErrorHandling:
         """Test user behavior agent with missing UBI data."""
         from agents.art import specialized_agents
 
-        specialized_agents._opensearch_tools = [MagicMock()]
+        specialized_agents._mcp_client = MagicMock()
 
         mock_agent = MagicMock()
         # Simulate missing data scenario - agent should handle this gracefully
@@ -337,7 +332,7 @@ class TestSpecializedAgentsErrorHandling:
         """Test user behavior agent when UBI tools fail due to missing data."""
         from agents.art import specialized_agents
 
-        specialized_agents._opensearch_tools = [MagicMock()]
+        specialized_agents._mcp_client = MagicMock()
 
         mock_agent = MagicMock()
         # Simulate tool error when data is missing
@@ -359,18 +354,18 @@ class TestSpecializedAgentsErrorHandling:
         """Test agent initialization when tools are not available."""
         from agents.art import specialized_agents
 
-        # Ensure tools are empty (fixture handles this)
-        assert specialized_agents._opensearch_tools == []
+        # Ensure client is unset (fixture handles this)
+        assert specialized_agents._mcp_client is None
 
         # Test all agents without tools - should initialize with available tools, log warnings
         # Hypothesis agent
         result = await specialized_agents.hypothesis_agent("test query")
-        assert "Error: OpenSearch tools not configured" in result
+        assert "Error: MCPClient not configured" in result
 
         # Evaluation agent
         result = await specialized_agents.evaluation_agent("test query")
-        assert "Error: OpenSearch tools not configured" in result
+        assert "Error: MCPClient not configured" in result
 
         # User behavior agent
         result = await specialized_agents.user_behavior_analysis_agent("test query")
-        assert "Error: OpenSearch tools not configured" in result
+        assert "Error: MCPClient not configured" in result

@@ -12,6 +12,9 @@ OpenSearch Agent Server enables intelligent agent-based interactions within Open
 - **Flexible LLM Support** — Works with AWS Bedrock, Ollama, or other LLM providers
 - **Production Ready** — Includes authentication, rate limiting, error recovery, and observability
 
+## Demo
+https://github.com/user-attachments/assets/d465d805-40c9-4158-8e4b-0805c675df45
+
 ## Architecture
 
 ```
@@ -49,7 +52,7 @@ OpenSearch Dashboards (AG-UI)
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/mingshl/opensearch-agent-server.git
+   git clone https://github.com/opensearch-project/opensearch-agent-server.git
    cd opensearch-agent-server
    ```
 
@@ -86,14 +89,19 @@ AG_UI_AUTH_ENABLED=false
 # CORS (allow OpenSearch Dashboards origin)
 AG_UI_CORS_ORIGINS=http://localhost:5601
 
-# LLM Provider — Option 1: AWS Bedrock
-AWS_ACCESS_KEY_ID=your_access_key
-AWS_SECRET_ACCESS_KEY=your_secret_key
-AWS_REGION=us-east-1
-BEDROCK_INFERENCE_PROFILE_ARN=arn:aws:bedrock:...
+# LLM Provider — uncomment the section for the provider you want to use:
 
-# LLM Provider — Option 2: Ollama (local)
-OLLAMA_MODEL=llama3
+# Option 1: AWS Bedrock
+# AWS_ACCESS_KEY_ID=your_access_key
+# AWS_SECRET_ACCESS_KEY=your_secret_key
+# AWS_REGION=us-east-1
+# BEDROCK_MODEL=us.anthropic.claude-sonnet-4-20250514-v1:0
+# BEDROCK_SMALL_MODEL=us.anthropic.claude-haiku-4-5-20251001-v1:0
+
+# Option 2: Ollama
+# OLLAMA_HOST=http://localhost:11434
+# OLLAMA_MODEL=llama3
+# OLLAMA_SMALL_MODEL=llama3
 
 # Logging
 AG_UI_LOG_FORMAT=human
@@ -117,6 +125,43 @@ This clones, builds, and starts everything in one command:
 **Prerequisites:** Java 21+, Node.js 20+, Python 3.12+, [uv](https://astral.sh/uv), yarn, jq, curl
 
 **Access the Chat:** Open http://localhost:5601 and click the chat icon in the header.
+
+## PyPI Installation
+
+If you already have an OpenSearch cluster running and don't need the full quickstart setup, you can install and run the agent server directly from PyPI:
+
+```bash
+pip install opensearch-agent-server
+```
+
+Configure your environment:
+
+```bash
+export OPENSEARCH_URL=https://localhost:9200
+export OPENSEARCH_USERNAME=admin
+export OPENSEARCH_PASSWORD=admin
+export AG_UI_AUTH_ENABLED=false
+```
+
+Start the agent server and MCP server together:
+
+```bash
+opensearch-agent-server --with-mcp
+```
+
+This starts both the OpenSearch MCP Server (port 3001) and the Agent Server (port 8001) in a single process. Both stop together on `Ctrl+C`.
+
+```bash
+# Verify
+curl http://localhost:8001/health    # {"status": "ok"}
+curl http://localhost:8001/agents    # list registered agents
+```
+
+You can also customize the MCP server port and config:
+
+```bash
+opensearch-agent-server --with-mcp --mcp-port 3002 --mcp-config ./custom_mcp.yml
+```
 
 ### Manual Setup
 
@@ -286,6 +331,7 @@ opensearch-agent-server/
 │   │   └── registry.py            # Agent registry
 │   ├── server/                    # FastAPI application
 │   │   ├── ag_ui_app.py           # Main FastAPI app and lifespan
+│   │   ├── cli.py                 # CLI entry point (opensearch-agent-server command)
 │   │   ├── agent_orchestrator.py  # Orchestrator: routes requests to agents
 │   │   ├── run_routes.py          # AG-UI protocol endpoints
 │   │   ├── config.py              # Configuration management

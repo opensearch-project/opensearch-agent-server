@@ -375,7 +375,7 @@ start_mcp_server() {
 
   OPENSEARCH_URL="http://localhost:$OS_PORT" \
   OPENSEARCH_HEADER_AUTH=true \
-    bash -c "exec uv tool run opensearch-mcp-server-py --transport stream --port $MCP_PORT" \
+    bash -c "exec uv tool run opensearch-mcp-server-py --transport stream --port $MCP_PORT --config '$PROJECT_ROOT/mcp_config.yml'" \
     > "$LOG_DIR/mcp-server.log" 2>&1 &
   disown
   local bg_pid=$!

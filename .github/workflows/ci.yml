@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      OPENSEARCH_URL: "https://localhost:9200"
+      AWS_ACCESS_KEY_ID: "test"
+      AWS_SECRET_ACCESS_KEY: "test"
+      AWS_REGION: "us-east-1"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+
+      - name: Create virtual environment and install dependencies (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          uv venv
+          source .venv/bin/activate
+          uv sync --all-extras
+
+      - name: Create virtual environment and install dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          uv venv
+          .venv\Scripts\activate
+          uv sync --all-extras
+        shell: pwsh
+
+      - name: Run unit tests (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          source .venv/bin/activate
+          python -m pytest tests/unit/ -v --tb=short
+
+      - name: Run unit tests (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          .venv\Scripts\activate
+          python -m pytest tests/unit/ -v --tb=short
+        shell: pwsh

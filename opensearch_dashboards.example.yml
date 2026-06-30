@@ -29,6 +29,9 @@ contextProvider:
 chat:
   enabled: true
   agUiUrl: "http://localhost:8001/runs"  # OpenSearch agent server endpoint
+  # Forward OBO tokens to the agent server for authenticated MCP tool calls.
+  # Requires the OpenSearch security plugin with on_behalf_of enabled.
+  # forwardCredentials: true
   # Optional: Use ML Commons agent instead (requires ml-commons plugin)
   # mlCommonsAgentId: "your-agent-id"
 
