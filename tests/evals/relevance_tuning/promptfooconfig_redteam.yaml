@@ -16,7 +16,7 @@ defaultTest:
       config:
         # temperature: 0
         region: us-east-1
-        max_tokens: 256
+        max_tokens: 1024
         # Other provider config options
       
       # Or using an inference profile
@@ -38,7 +38,7 @@ redteam:
     config:
       # temperature: 0
       region: us-east-1
-      max_tokens: 256
+      max_tokens: 1024
   language:
     - 'English'
     #- 'German'

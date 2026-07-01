@@ -7,6 +7,10 @@ from dotenv import load_dotenv
 # of src package
 script_path = "/".join(os.path.realpath(__file__).split("/")[:-1])
 sys.path.insert(0, f"{script_path}/../../")
+# Put the project's own src/ ahead of site-packages so the top-level `tools`,
+# `utils`, `agents` packages resolve to this project and not a same-named
+# installed package (the agent server normally runs with cwd=src for this reason).
+sys.path.insert(0, os.path.abspath(f"{script_path}/../../../../../../src"))
 from src.test_gen.assertions import (
     CaseInsensitiveContainsAssertion,
     LLMRubricAssertion,
@@ -30,6 +34,7 @@ from src.test_gen.cases.model_cases import \
     get_field_boost_offline_eval_test_case, get_search_config_copy_and_adjust_test_case, \
     get_multi_step_analysis_test_case_1
 from src.test_gen.opensearch_client import get_client_manager
+from src.utils.mcp_retrieval import init_mcp, shutdown
 
 
 def build_test_suite_fast():
@@ -68,6 +73,7 @@ def build_test_suite_fast():
                     min_search_volume=5,
                     time_range_days=30,
                     ubi_index="test_event_index",
+                    query_index="test_query_index",
                 ),
                 # low ctr case
                 create_document_ctr_test_case(
@@ -167,7 +173,7 @@ defaultTest:
       id: bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0
       config:
         region: us-east-1
-        max_tokens: 256
+        max_tokens: 1024
 
 tests: file://tests.csv
     """
@@ -179,8 +185,14 @@ if __name__ == "__main__":
     # on the first call, all subsequent calls just reuse the same object
     # (if the global object is not cleared)
     load_dotenv(f"{script_path}/../../../../../../.env")
+    # Direct client: still used for the search-relevance plugin reads (Category B).
     get_client_manager(
         opensearch_url=os.environ["TEST_GEN_OPENSEARCH_URL"],
+        username=os.environ["TEST_GEN_OPENSEARCH_USERNAME"],
+        password=os.environ["TEST_GEN_OPENSEARCH_PASSWORD"],
+    )
+    # MCP retrieval: UBI metric ground-truth goes through the agent's data path.
+    init_mcp(
         username=os.environ["TEST_GEN_OPENSEARCH_USERNAME"],
         password=os.environ["TEST_GEN_OPENSEARCH_PASSWORD"],
     )
@@ -202,3 +214,5 @@ if __name__ == "__main__":
     test_suite_generation.write(f"{resource_generation_test_path}/tests.csv")
     with open(f"{resource_generation_test_path}/eval.yaml", "w") as f:
         f.write(get_promptfoo_config_from_csv_cases(300000))
+
+    shutdown()
