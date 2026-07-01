@@ -1,14 +1,58 @@
 # This module contains some of the tools used to actually generate
 # tests from existing indices.
+#
+# UBI metric ground-truth (query/document CTR) is computed via the SAME path the
+# agent under test uses: raw aggregations are fetched through the OpenSearch MCP
+# server (src.utils.mcp_retrieval.search) and handed to the shared compute tools
+# (tools.art.ubi_metrics_tools). The search-relevance plugin reads further below
+# still use the direct OpenSearch client.
+#
+# NOTE: ``time_range_days`` applies a last-N-days timestamp filter when set
+# (default 30); pass None to compute over all data. Displayed values are rounded
+# half-up (see _round2) to match the agent's conventional rounding.
 import json
-from datetime import UTC, datetime, timedelta
+from decimal import ROUND_HALF_UP, Decimal
 
+from src.test_gen.opensearch_client import OpenSearchClientManager, get_client_manager
+from src.utils.mcp_retrieval import search
+from tools.art.ubi_metrics_tools import compute_document_ctr, compute_ubi_metrics
 from utils.logging_helpers import get_logger
 from utils.tool_utils import format_tool_error, log_tool_error
 
-from src.test_gen.opensearch_client import OpenSearchClientManager, get_client_manager
-
 logger = get_logger(__name__)
+
+CLICK_ACTION = "click"
+IMPRESSION_ACTION = "impression"
+ACTION_FIELD = "action_name"
+QUERY_TEXT_FIELD = "user_query"
+QUERY_ID_FIELD = "query_id"
+OBJECT_ID_FIELD = "event_attributes.object.object_id"
+POSITION_FIELD = "event_attributes.position.ordinal"
+TIMESTAMP_FIELD = "timestamp"
+
+# A separate query table (one row per search) is always assumed. UBI pairs
+# ubi_events with ubi_queries by default; any other source must name both tables.
+_QUERY_INDEX_BY_EVENTS = {
+    "ubi_events": "ubi_queries",
+}
+
+
+def _resolve_query_index(events_index: str, query_index: str | None) -> str:
+    """Resolve the query index that holds search volume (one row per search).
+
+    - an explicit ``query_index`` wins;
+    - the UBI events index pairs with ``ubi_queries`` by default;
+    - any other events index requires an explicit ``query_index``.
+    """
+    if query_index is not None:
+        return query_index
+    if events_index in _QUERY_INDEX_BY_EVENTS:
+        return _QUERY_INDEX_BY_EVENTS[events_index]
+    raise ValueError(
+        f"No query index configured for events index '{events_index}'. UBI "
+        f"defaults to ubi_queries; for any other source pass query_index "
+        f"explicitly — a separate query table is always assumed."
+    )
 
 
 async def list_experiment() -> str:
@@ -127,106 +171,188 @@ async def list_search_configuration() -> str:
         return log_tool_error(logger, f"Error listing search configurations: {str(e)}")
 
 
+# ---------------------------------------------------------------------------
+# UBI metrics — retrieved via MCP SearchIndexTool, computed via the shared
+# compute_ubi_metrics / compute_document_ctr tools (the agent's path).
+# ---------------------------------------------------------------------------
+
+
+def _hits_total(resp: dict) -> int:
+    return int(((resp.get("hits") or {}).get("total") or {}).get("value", 0))
+
+
+def _round2(x: float) -> float:
+    """Round half-UP to 2 decimals, matching conventional (and LLM) rounding
+    rather than Python's round-half-to-even (e.g. 4.625 -> 4.63, not 4.62)."""
+    return float(Decimal(str(x)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
+
+def _time_range_filter(time_range_days: int | None) -> dict | None:
+    """Range clause for the last ``time_range_days`` days, or None for no filter.
+
+    Uses the same ``now-Nd/d`` .. ``now/d`` date math the agent applies for a
+    stated window, so windowed ground-truth aligns with the agent's queries.
+    """
+    if not time_range_days:
+        return None
+    return {
+        "range": {TIMESTAMP_FIELD: {"gte": f"now-{time_range_days}d/d", "lte": "now/d"}}
+    }
+
+
+def _filtered(must: list[dict], time_range_days: int | None) -> dict:
+    """Build a query clause from must-clauses plus an optional time-range filter."""
+    time_filter = _time_range_filter(time_range_days)
+    if not must and time_filter is None:
+        return {"match_all": {}}
+    bool_q: dict = {}
+    if must:
+        bool_q["must"] = must
+    if time_filter is not None:
+        bool_q["filter"] = [time_filter]
+    return {"bool": bool_q}
+
+
+def _to_click_result(q: dict) -> dict:
+    """Map a compute_ubi_metrics per-query entry to the legacy ClickResult shape."""
+    return {
+        "query_text": q["query"],
+        "search_volume": q["search_volume"],
+        "searches_with_clicks": q["searches_with_clicks"],
+        "total_clicks": q["total_clicks"],
+        "ctr_percentage": _round2(q["ctr"] * 100),
+        "average_clicks_per_search": q["clicks_per_search"],
+        "zero_click_rate_percentage": _round2(q["zero_click_rate"] * 100),
+    }
+
+
+async def _compute_query_breakdown(
+    events_index: str,
+    query_index: str,
+    top_n: int,
+    min_search_volume: int = 0,
+    time_range_days: int | None = 30,
+) -> dict:
+    """Fetch the canonical UBI aggregations via MCP and run compute_ubi_metrics.
+
+    A separate query table and event table are always used. Search volume comes
+    from ``query_index`` (one row per search), so the ``doc_count`` is the exact
+    search volume. Clicks and searches-with-clicks come from ``events_index``;
+    searches-with-clicks (distinct clicked query_ids per query) is counted
+    exactly by enumerating query_ids (a ``terms`` sub-agg, counted) rather than
+    the approximate ``cardinality`` aggregation. Assumes the enumerated counts
+    stay within OpenSearch's terms ``size`` / ``search.max_buckets`` limits
+    (fine at the synthetic eval-data scale).
+    """
+    click_must = [{"term": {ACTION_FIELD: CLICK_ACTION}}]
+
+    # Search volume = doc_count of the query table (one row per search) — exact.
+    total_queries = _hits_total(
+        search(query_index, {"query": _filtered([], time_range_days)})
+    )
+    svb = search(query_index, {
+        "query": _filtered([], time_range_days),
+        "aggs": {"by_q": {"terms": {"field": QUERY_TEXT_FIELD, "size": 1000}}},
+    })
+    sv_buckets = svb["aggregations"]["by_q"]["buckets"]
+
+    total_clicks = _hits_total(
+        search(events_index, {"query": _filtered(click_must, time_range_days)})
+    )
+    qwc = search(events_index, {
+        "query": _filtered(click_must, time_range_days),
+        "aggs": {"u": {"cardinality": {"field": QUERY_ID_FIELD}}},
+    })
+    queries_with_clicks = int(qwc["aggregations"]["u"].get("value", 0))
+
+    cb = search(events_index, {
+        "query": _filtered(click_must, time_range_days),
+        "aggs": {
+            "by_q": {
+                "terms": {"field": QUERY_TEXT_FIELD, "size": 1000},
+                "aggs": {"qids": {"terms": {"field": QUERY_ID_FIELD, "size": 100000}}},
+            },
+            "missing_query_text": {"missing": {"field": QUERY_TEXT_FIELD}},
+        },
+    })
+    # searches_with_clicks = exact distinct clicked query_ids per query (counted
+    # from the enumerated buckets), reshaped to the {"value": n} form that
+    # compute_ubi_metrics reads.
+    click_buckets = [
+        {
+            "key": b["key"],
+            "doc_count": b["doc_count"],
+            "searches_with_clicks": {"value": len((b.get("qids") or {}).get("buckets", []))},
+        }
+        for b in cb["aggregations"]["by_q"]["buckets"]
+    ]
+    clicks_without = int(cb["aggregations"]["missing_query_text"].get("doc_count", 0))
+
+    return json.loads(await compute_ubi_metrics(
+        total_queries=total_queries,
+        total_clicks=total_clicks,
+        queries_with_clicks=queries_with_clicks,
+        search_volume_buckets=json.dumps(sv_buckets),
+        click_buckets=json.dumps(click_buckets),
+        clicks_without_query_text=clicks_without,
+        top_n=top_n,
+        min_search_volume=min_search_volume,
+    ))
+
+
 async def get_query_ctr(
     query_text: str,
-    time_range_days: int = 30,
+    time_range_days: int | None = 30,
     ubi_index: str = "ubi_events",
+    query_index: str | None = None,
 ) -> str:
     """
     Calculate click-through rate for a specific query.
 
     Args:
         query_text: The search query text to analyze
-        time_range_days: Number of days to look back (default: 30)
+        time_range_days: When set (e.g. 30), restrict to the last N days; when
+            None, compute over all data. Echoed into the result.
         ubi_index: Name of the UBI events index (default: "ubi_events")
+        query_index: Index holding search volume. None auto-resolves (ubi_queries
+            for ubi_events, otherwise the events index itself in single-index mode).
 
     Returns:
         str: JSON string with query CTR metrics including total searches,
              searches with clicks, CTR percentage, and average clicks per search
     """
     try:
-        client_manager: OpenSearchClientManager = get_client_manager()
-        client = client_manager.get_client()
-
-        # Calculate time range (format without microseconds for OpenSearch)
-        end_time = datetime.now(UTC)
-        start_time = end_time - timedelta(days=time_range_days)
-
-        # Format timestamps without microseconds
-        end_time_str = end_time.strftime("%Y-%m-%dT%H:%M:%SZ")
-        start_time_str = start_time.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-        # Query to get search and click counts for the query
-        query_body = {
-            "size": 0,
-            "query": {
-                "bool": {
-                    "must": [
-                        {"term": {"user_query": query_text}},
-                        {
-                            "range": {
-                                "timestamp": {
-                                    "gte": start_time_str,
-                                    "lte": end_time_str,
-                                },
-                            },
-                        },
-                    ],
-                },
-            },
-            "aggs": {
-                "total_searches": {
-                    "cardinality": {
-                        "field": "query_id",
-                    },
-                },
-                "searches_with_clicks": {
-                    "filter": {
-                        "term": {
-                            "action_name": "click",
-                        },
-                    },
-                    "aggs": {
-                        "unique_queries": {
-                            "cardinality": {
-                                "field": "query_id",
-                            },
-                        },
-                    },
-                },
-            },
-        }
-
-        response = client.search(
-            index=ubi_index,
-            body=query_body,
+        query_index = _resolve_query_index(ubi_index, query_index)
+        metrics = await _compute_query_breakdown(
+            ubi_index, query_index, top_n=100000, time_range_days=time_range_days
         )
-
-        total_searches = response["aggregations"]["total_searches"]["value"]
-        searches_with_clicks = response["aggregations"]["searches_with_clicks"][
-            "unique_queries"
-        ]["value"]
-        total_clicks = response["aggregations"]["searches_with_clicks"]["doc_count"]
-
-        ctr = (searches_with_clicks / total_searches * 100) if total_searches > 0 else 0
-        avg_clicks = (total_clicks / total_searches) if total_searches > 0 else 0
-        zero_click_rate = (
-            ((total_searches - searches_with_clicks) / total_searches * 100)
-            if total_searches > 0
-            else 0
+        match = next(
+            (q for q in metrics.get("top_queries_by_ctr", []) if q["query"] == query_text),
+            None,
         )
-
-        result = {
-            "query_text": query_text,
-            "time_range_days": time_range_days,
-            "total_searches": total_searches,
-            "searches_with_clicks": searches_with_clicks,
-            "total_clicks": total_clicks,
-            "ctr_percentage": round(ctr, 2),
-            "average_clicks_per_search": round(avg_clicks, 2),
-            "zero_click_rate_percentage": round(zero_click_rate, 2),
-        }
-
+        if match is None:
+            result = {
+                "query_text": query_text,
+                "time_range_days": time_range_days,
+                "total_searches": 0,
+                "searches_with_clicks": 0,
+                "total_clicks": 0,
+                "ctr_percentage": 0,
+                "average_clicks_per_search": 0,
+                "zero_click_rate_percentage": 0,
+            }
+        else:
+            cr = _to_click_result(match)
+            result = {
+                "query_text": query_text,
+                "time_range_days": time_range_days,
+                "total_searches": cr["search_volume"],
+                "searches_with_clicks": cr["searches_with_clicks"],
+                "total_clicks": cr["total_clicks"],
+                "ctr_percentage": cr["ctr_percentage"],
+                "average_clicks_per_search": cr["average_clicks_per_search"],
+                "zero_click_rate_percentage": cr["zero_click_rate_percentage"],
+            }
         return json.dumps(result, indent=2)
 
     except Exception as e:
@@ -234,14 +360,15 @@ async def get_query_ctr(
 
 
 async def get_document_ctr(
-    doc_id: str, time_range_days: int = 30, ubi_index: str = "ubi_events"
+    doc_id: str, time_range_days: int | None = 30, ubi_index: str = "ubi_events"
 ) -> str:
     """
     Calculate click-through rate for a specific document.
 
     Args:
         doc_id: The document ID to analyze
-        time_range_days: Number of days to look back (default: 30)
+        time_range_days: When set (e.g. 30), restrict to the last N days; when
+            None, compute over all data. Echoed into the result.
         ubi_index: Name of the UBI events index (default: "ubi_events")
 
     Returns:
@@ -249,82 +376,44 @@ async def get_document_ctr(
              total clicks, CTR percentage, and average position when clicked
     """
     try:
-        client_manager: OpenSearchClientManager = get_client_manager()
-        client = client_manager.get_client()
+        impressions = _hits_total(search(ubi_index, {
+            "query": _filtered(
+                [
+                    {"term": {OBJECT_ID_FIELD: doc_id}},
+                    {"term": {ACTION_FIELD: IMPRESSION_ACTION}},
+                ],
+                time_range_days,
+            ),
+        }))
+        clk = search(ubi_index, {
+            "query": _filtered(
+                [
+                    {"term": {OBJECT_ID_FIELD: doc_id}},
+                    {"term": {ACTION_FIELD: CLICK_ACTION}},
+                ],
+                time_range_days,
+            ),
+            "aggs": {"avg_position": {"avg": {"field": POSITION_FIELD}}},
+        })
+        clicks = _hits_total(clk)
+        avg_position = clk["aggregations"]["avg_position"].get("value")
 
-        # Calculate time range (format without microseconds for OpenSearch)
-        end_time = datetime.now(UTC)
-        start_time = end_time - timedelta(days=time_range_days)
-
-        # Format timestamps without microseconds
-        end_time_str = end_time.strftime("%Y-%m-%dT%H:%M:%SZ")
-        start_time_str = start_time.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-        # Query to get impression and click counts for the document
-        query_body = {
-            "size": 0,
-            "query": {
-                "bool": {
-                    "must": [
-                        {"term": {"event_attributes.object.object_id": doc_id}},
-                        {
-                            "range": {
-                                "timestamp": {
-                                    "gte": start_time_str,
-                                    "lte": end_time_str,
-                                },
-                            },
-                        },
-                    ],
-                },
-            },
-            "aggs": {
-                "total_impressions": {
-                    "filter": {
-                        "term": {
-                            "action_name": "impression",
-                        },
-                    },
-                },
-                "clicks": {
-                    "filter": {
-                        "term": {
-                            "action_name": "click",
-                        },
-                    },
-                    "aggs": {
-                        "avg_position": {
-                            "avg": {
-                                "field": "event_attributes.position.ordinal",
-                            },
-                        },
-                    },
-                },
-            },
-        }
-
-        response = client.search(
-            index=ubi_index,
-            body=query_body,
-        )
-
-        total_impressions = response["aggregations"]["total_impressions"]["doc_count"]
-        total_clicks = response["aggregations"]["clicks"]["doc_count"]
-        avg_position = response["aggregations"]["clicks"]["avg_position"]["value"]
-
-        ctr = (total_clicks / total_impressions * 100) if total_impressions > 0 else 0
-
+        out = json.loads(await compute_document_ctr(
+            document_id=doc_id,
+            impressions=impressions,
+            clicks=clicks,
+            avg_click_position=avg_position,
+        ))
         result = {
             "document_id": doc_id,
             "time_range_days": time_range_days,
-            "total_impressions": total_impressions,
-            "total_clicks": total_clicks,
-            "ctr_percentage": round(ctr, 2),
-            "average_position_when_clicked": round(avg_position, 2)
-            if avg_position
+            "total_impressions": out["impressions"],
+            "total_clicks": out["clicks"],
+            "ctr_percentage": _round2(out["ctr"] * 100),
+            "average_position_when_clicked": _round2(out["avg_click_position"])
+            if out["avg_click_position"] is not None
             else None,
         }
-
         return json.dumps(result, indent=2)
 
     except Exception as e:
@@ -334,128 +423,41 @@ async def get_document_ctr(
 async def get_query_performance_metrics(
     query_text: str | None = None,
     top_n: int = 20,
-    time_range_days: int = 30,
+    time_range_days: int | None = 30,
     ubi_index: str = "ubi_events",
+    query_index: str | None = None,
 ) -> str:
     """
     Get comprehensive performance metrics for queries.
-    If query_text provided: detailed metrics for that query
-    If query_text is None: top N queries by volume with their metrics
+    If query_text provided: detailed metrics for that query.
+    If query_text is None: top N queries (by CTR) with their metrics.
 
     Args:
         query_text: Specific query to analyze (optional)
-        top_n: Number of top queries to return if query_text not provided (default: 20)
-        time_range_days: Number of days to look back (default: 30)
+        top_n: Number of top queries to return if query_text not provided
+        time_range_days: When set (e.g. 30), restrict to the last N days; when
+            None, compute over all data. Echoed into the result.
         ubi_index: Name of the UBI events index (default: "ubi_events")
+        query_index: Index holding search volume. None auto-resolves (ubi_queries
+            for ubi_events, otherwise the events index itself in single-index mode).
 
     Returns:
         str: JSON string with performance metrics for query/queries
     """
     try:
-        client_manager: OpenSearchClientManager = get_client_manager()
-        client = client_manager.get_client()
-
-        # Calculate time range (format without microseconds for OpenSearch)
-        end_time = datetime.now(UTC)
-        start_time = end_time - timedelta(days=time_range_days)
-
-        # Format timestamps without microseconds
-        end_time_str = end_time.strftime("%Y-%m-%dT%H:%M:%SZ")
-        start_time_str = start_time.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-        # If specific query provided, use GetQueryCTRTool
         if query_text:
-            return await get_query_ctr(query_text, time_range_days, ubi_index)
+            return await get_query_ctr(query_text, time_range_days, ubi_index, query_index)
 
-        # Otherwise, get top queries with metrics
-        query_body = {
-            "size": 0,
-            "query": {
-                "range": {
-                    "timestamp": {
-                        "gte": start_time_str,
-                        "lte": end_time_str,
-                    },
-                },
-            },
-            "aggs": {
-                "top_queries": {
-                    "terms": {
-                        "field": "user_query",
-                        "size": top_n,
-                        "order": {
-                            "_count": "desc",
-                        },
-                    },
-                    "aggs": {
-                        "unique_searches": {
-                            "cardinality": {
-                                "field": "query_id",
-                            },
-                        },
-                        "click_events": {
-                            "filter": {
-                                "term": {
-                                    "action_name": "click",
-                                },
-                            },
-                            "aggs": {
-                                "unique_queries_with_clicks": {
-                                    "cardinality": {
-                                        "field": "query_id",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        }
-
-        response = client.search(
-            index=ubi_index,
-            body=query_body,
+        query_index = _resolve_query_index(ubi_index, query_index)
+        metrics = await _compute_query_breakdown(
+            ubi_index, query_index, top_n=top_n, time_range_days=time_range_days
         )
-
-        queries = []
-        for bucket in response["aggregations"]["top_queries"]["buckets"]:
-            query = bucket["key"]
-            total_searches = bucket["unique_searches"]["value"]
-            searches_with_clicks = bucket["click_events"]["unique_queries_with_clicks"][
-                "value"
-            ]
-            total_clicks = bucket["click_events"]["doc_count"]
-
-            ctr = (
-                (searches_with_clicks / total_searches * 100)
-                if total_searches > 0
-                else 0
-            )
-            avg_clicks = (total_clicks / total_searches) if total_searches > 0 else 0
-            zero_click_rate = (
-                ((total_searches - searches_with_clicks) / total_searches * 100)
-                if total_searches > 0
-                else 0
-            )
-
-            queries.append(
-                {
-                    "query_text": query,
-                    "search_volume": total_searches,
-                    "searches_with_clicks": searches_with_clicks,
-                    "total_clicks": total_clicks,
-                    "ctr_percentage": round(ctr, 2),
-                    "average_clicks_per_search": round(avg_clicks, 2),
-                    "zero_click_rate_percentage": round(zero_click_rate, 2),
-                }
-            )
-
+        queries = [_to_click_result(q) for q in metrics.get("top_queries_by_ctr", [])]
         result = {
             "time_range_days": time_range_days,
             "total_queries_analyzed": len(queries),
             "queries": queries,
         }
-
         return json.dumps(result, indent=2)
 
     except Exception as e:
@@ -467,8 +469,9 @@ async def get_query_performance_metrics(
 async def get_top_queries_by_engagement(
     top_n: int = 20,
     min_search_volume: int = 5,
-    time_range_days: int = 30,
+    time_range_days: int | None = 30,
     ubi_index: str = "ubi_events",
+    query_index: str | None = None,
 ) -> str:
     """
     Get queries with highest CTR (best engagement).
@@ -477,41 +480,31 @@ async def get_top_queries_by_engagement(
     Args:
         top_n: Number of top queries to return (default: 20)
         min_search_volume: Minimum number of searches required (default: 5)
-        time_range_days: Number of days to look back (default: 30)
+        time_range_days: When set (e.g. 30), restrict to the last N days; when
+            None, compute over all data. Echoed into the result.
         ubi_index: Name of the UBI events index (default: "ubi_events")
+        query_index: Index holding search volume. None auto-resolves (ubi_queries
+            for ubi_events, otherwise the events index itself in single-index mode).
 
     Returns:
         str: JSON string with top queries by CTR
     """
     try:
-        # Get all query metrics
-        metrics_json = await get_query_performance_metrics(
-            query_text=None,
-            top_n=100,  # Get more to filter by volume
+        query_index = _resolve_query_index(ubi_index, query_index)
+        metrics = await _compute_query_breakdown(
+            ubi_index,
+            query_index,
+            top_n=top_n,
+            min_search_volume=min_search_volume,
             time_range_days=time_range_days,
-            ubi_index=ubi_index,
         )
-
-        metrics = json.loads(metrics_json)
-        if "error" in metrics:
-            return metrics_json
-
-        # Filter by minimum volume and sort by CTR
-        filtered_queries = [
-            q for q in metrics["queries"] if q["search_volume"] >= min_search_volume
-        ]
-
-        sorted_queries = sorted(
-            filtered_queries, key=lambda x: x["ctr_percentage"], reverse=True
-        )[:top_n]
-
+        queries = [_to_click_result(q) for q in metrics.get("top_queries_by_ctr", [])]
         result = {
             "time_range_days": time_range_days,
             "min_search_volume": min_search_volume,
-            "total_queries_analyzed": len(sorted_queries),
-            "queries": sorted_queries,
+            "total_queries_analyzed": len(queries),
+            "queries": queries,
         }
-
         return json.dumps(result, indent=2)
 
     except Exception as e:
@@ -523,7 +516,7 @@ async def get_top_queries_by_engagement(
 async def get_top_documents_by_engagement(
     top_n: int = 20,
     min_impressions: int = 5,
-    time_range_days: int = 30,
+    time_range_days: int | None = 30,
     ubi_index: str = "ubi_events",
 ) -> str:
     """
@@ -533,115 +526,54 @@ async def get_top_documents_by_engagement(
     Args:
         top_n: Number of top documents to return (default: 20)
         min_impressions: Minimum number of impressions required (default: 5)
-        time_range_days: Number of days to look back (default: 30)
+        time_range_days: When set (e.g. 30), restrict to the last N days; when
+            None, compute over all data. Echoed into the result.
         ubi_index: Name of the UBI events index (default: "ubi_events")
 
     Returns:
         str: JSON string with top documents by CTR
     """
     try:
-        client_manager: OpenSearchClientManager = get_client_manager()
-        client = client_manager.get_client()
-
-        # Calculate time range (format without microseconds for OpenSearch)
-        end_time = datetime.now(UTC)
-        start_time = end_time - timedelta(days=time_range_days)
-
-        # Format timestamps without microseconds
-        end_time_str = end_time.strftime("%Y-%m-%dT%H:%M:%SZ")
-        start_time_str = start_time.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-        # Get top documents by impressions first
-        query_body = {
-            "size": 0,
-            "query": {
-                "range": {
-                    "timestamp": {
-                        "gte": start_time_str,
-                        "lte": end_time_str,
-                    },
-                },
-            },
+        resp = search(ubi_index, {
+            "query": _filtered([], time_range_days),
             "aggs": {
-                "top_documents": {
-                    "terms": {
-                        "field": "event_attributes.object.object_id",
-                        "size": 100,  # Get more to filter
-                        "order": {
-                            "_count": "desc",
-                        },
-                    },
+                "by_doc": {
+                    "terms": {"field": OBJECT_ID_FIELD, "size": 100},
                     "aggs": {
-                        "impressions": {
-                            "filter": {
-                                "term": {
-                                    "action_name": "impression",
-                                },
-                            },
-                        },
+                        "impressions": {"filter": {"term": {ACTION_FIELD: IMPRESSION_ACTION}}},
                         "clicks": {
-                            "filter": {
-                                "term": {
-                                    "action_name": "click",
-                                },
-                            },
-                            "aggs": {
-                                "avg_position": {
-                                    "avg": {
-                                        "field": "event_attributes.position.ordinal",
-                                    },
-                                },
-                            },
+                            "filter": {"term": {ACTION_FIELD: CLICK_ACTION}},
+                            "aggs": {"avg_position": {"avg": {"field": POSITION_FIELD}}},
                         },
                     },
                 },
             },
-        }
+        })
+        buckets = resp["aggregations"]["by_doc"]["buckets"]
 
-        response = client.search(
-            index=ubi_index,
-            body=query_body,
-        )
-
-        documents = []
-        for bucket in response["aggregations"]["top_documents"]["buckets"]:
-            doc_id = bucket["key"]
-            total_impressions = bucket["impressions"]["doc_count"]
-            total_clicks = bucket["clicks"]["doc_count"]
-            avg_position = bucket["clicks"]["avg_position"]["value"]
-
-            # Filter by minimum impressions
-            if total_impressions < min_impressions:
-                continue
-
-            ctr = (
-                (total_clicks / total_impressions * 100) if total_impressions > 0 else 0
-            )
-
-            documents.append(
-                {
-                    "document_id": doc_id,
-                    "total_impressions": total_impressions,
-                    "total_clicks": total_clicks,
-                    "ctr_percentage": round(ctr, 2),
-                    "average_position_when_clicked": round(avg_position, 2)
-                    if avg_position
-                    else None,
-                }
-            )
-
-        # Sort by CTR and take top N
-        sorted_documents = sorted(
-            documents, key=lambda x: x["ctr_percentage"], reverse=True
-        )[:top_n]
-
+        out = json.loads(await compute_document_ctr(
+            document_buckets=json.dumps(buckets),
+            min_impressions=min_impressions,
+            top_n=top_n,
+        ))
+        documents = [
+            {
+                "document_id": d["document_id"],
+                "total_impressions": d["impressions"],
+                "total_clicks": d["clicks"],
+                "ctr_percentage": _round2(d["ctr"] * 100),
+                "average_position_when_clicked": _round2(d["avg_click_position"])
+                if d["avg_click_position"] is not None
+                else None,
+            }
+            for d in out.get("top_documents_by_ctr", [])
+        ]
         result = {
             "time_range_days": time_range_days,
             "min_impressions": min_impressions,
-            "total_documents_analyzed": len(sorted_documents),
-            "documents": sorted_documents,
+            "total_documents_analyzed": len(documents),
+            "documents": documents,
         }
-
         return json.dumps(result, indent=2)
 
     except Exception as e:

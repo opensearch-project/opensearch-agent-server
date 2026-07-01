@@ -4,7 +4,7 @@ prompt,__expected1,__expected2
         properties: total query volume, searches with clicks and total number of clicks. 
         Further return the average clicks per search, the zero click rate and ctr. 
         The latter two give in percentages formatted with two decimals.
-        ","icontains-all: 1,1,6,100,6,0","llm-rubric: 
+        ","icontains-all: 10,4,9,40,0.90,60","llm-rubric: 
         Below under the header '###SEQUENCE' a few expected results are listed in yaml format.
         Each root element in the yaml listing refers to a single result.
         The keys in the yaml format are a description of the meaning under which the
@@ -23,13 +23,13 @@ prompt,__expected1,__expected2
         counts as fail. 
 
         ###SEQUENCE
-        CTR in percentage, rounded to two decimals: 100.0
-average number of clicks per search for the given query: 6.0
-number of searches with clicks: 1
-percentage of searches for the given query for which no click occurred: 0.0
+        CTR in percentage, rounded to two decimals: 40.0
+average number of clicks per search for the given query: 0.9
+number of searches with clicks: 4
+percentage of searches for the given query for which no click occurred: 60.0
 the user query: laptop
-total number of clicks: 6
-total number of searches: 1
+total number of clicks: 9
+total number of searches: 10
 
 
         ###FACTS
@@ -41,7 +41,7 @@ total number of searches: 1
         properties: total query volume, searches with clicks and total number of clicks. 
         Further return the average clicks per search, the zero click rate and ctr. 
         The latter two give in percentages formatted with two decimals.
-        ","icontains-all: 3,3,20,100,6.67,0","llm-rubric: 
+        ","icontains-all: 36,8,54,22.22,1.50,77.78","llm-rubric: 
         Below under the header '###SEQUENCE' a few expected results are listed in yaml format.
         Each root element in the yaml listing refers to a single result.
         The keys in the yaml format are a description of the meaning under which the
@@ -60,13 +60,13 @@ total number of searches: 1
         counts as fail. 
 
         ###SEQUENCE
-        CTR in percentage, rounded to two decimals: 100.0
-average number of clicks per search for the given query: 6.67
-number of searches with clicks: 3
-percentage of searches for the given query for which no click occurred: 0.0
+        CTR in percentage, rounded to two decimals: 22.22
+average number of clicks per search for the given query: 1.5
+number of searches with clicks: 8
+percentage of searches for the given query for which no click occurred: 77.78
 the user query: wireless earbuds
-total number of clicks: 20
-total number of searches: 3
+total number of clicks: 54
+total number of searches: 36
 
 
         ###FACTS
@@ -78,7 +78,7 @@ total number of searches: 3
         properties: total query volume, searches with clicks and total number of clicks. 
         Further return the average clicks per search, the zero click rate and ctr. 
         The latter two give in percentages formatted with two decimals.
-        ","icontains-all: 9,8,26,88.89,2.89,11.11","llm-rubric: 
+        ","icontains-all: 42,10,38,23.81,0.90,76.19","llm-rubric: 
         Below under the header '###SEQUENCE' a few expected results are listed in yaml format.
         Each root element in the yaml listing refers to a single result.
         The keys in the yaml format are a description of the meaning under which the
@@ -97,13 +97,13 @@ total number of searches: 3
         counts as fail. 
 
         ###SEQUENCE
-        CTR in percentage, rounded to two decimals: 88.89
-average number of clicks per search for the given query: 2.89
-number of searches with clicks: 8
-percentage of searches for the given query for which no click occurred: 11.11
+        CTR in percentage, rounded to two decimals: 23.81
+average number of clicks per search for the given query: 0.9
+number of searches with clicks: 10
+percentage of searches for the given query for which no click occurred: 76.19
 the user query: gold
-total number of clicks: 26
-total number of searches: 9
+total number of clicks: 38
+total number of searches: 42
 
 
         ###FACTS
@@ -114,7 +114,7 @@ total number of searches: 9
             in the index 'ubi_events'.
             For the given document, provide the total number of impressions, the
             total number of clicks, ctr in percentage (rounded and formatted to 2 decimals)
-            and the average click position.","icontains-all: 3,3,100,4","llm-rubric: 
+            and the average click position.","icontains-all: 11,8,72.73,4.63","llm-rubric: 
         Below under the header '###SEQUENCE' a few expected results are listed in yaml format.
         Each root element in the yaml listing refers to a single result.
         The keys in the yaml format are a description of the meaning under which the
@@ -133,28 +133,30 @@ total number of searches: 9
         counts as fail. 
 
         ###SEQUENCE
-        CTR in percentage, rounded to two decimals: 100.0
-average position in the search result for clicks on the document: 4.0
+        CTR in percentage, rounded to two decimals: 72.73
+average position in the search result for clicks on the document: 4.63
 id of the document: B07ZCRSVBB
-number of times the document was clicked: 3
-number of times users saw the document: 3
+number of times the document was clicked: 8
+number of times users saw the document: 11
 
 
         ###FACTS
         {}
 
         "
-"Analyze the top 20 queries performance by engagement
-                in the index 'ubi_events'. Only consider queries with at least
+"Analyze the top 20 queries performance by engagement.
+                Take the search/query volume from the query index 'ubi_queries'
+                and the click (event) counts from the event index 'ubi_events'.
+                Only consider queries with at least
                 5 searches, and over a time range of 30
                 days. Determine the following properties per query:
                 total query volume, searches with clicks and total number of clicks,
                 average clicks per search, the zero click rate and ctr.
-                The latter two give in percentages formatted with two decimals. 
+                The latter two give in percentages formatted with two decimals.
                 Also state how many queries matched the above filter criteria.
                 Do not use grouping delimiter for amounts over one thousand, only use decimal
                 delimiter where applicable.
-                ","icontains-all: gold,9,8,26,88.89,2.89,11.11,1","llm-rubric: 
+                ","icontains-all: gold,36,8,26,22.22,0.72,77.78,wireless earbuds,18,3,20,16.67,1.11,83.33,wireless,6,0,0,0,0,100,3","llm-rubric: 
         Below under the header '###SEQUENCE' a few expected results are listed in yaml format.
         Each root element in the yaml listing refers to a single result.
         The keys in the yaml format are a description of the meaning under which the
@@ -173,17 +175,33 @@ number of times users saw the document: 3
         counts as fail. 
 
         ###SEQUENCE
-        CTR in percentage, rounded to two decimals: 88.89
-average number of clicks per search for the given query: 2.89
+        CTR in percentage, rounded to two decimals: 22.22
+average number of clicks per search for the given query: 0.72
 number of searches with clicks: 8
-percentage of searches for the given query for which no click occurred: 11.11
+percentage of searches for the given query for which no click occurred: 77.78
 the user query: gold
 total number of clicks: 26
-total number of searches: 9
+total number of searches: 36
+---
+CTR in percentage, rounded to two decimals: 16.67
+average number of clicks per search for the given query: 1.11
+number of searches with clicks: 3
+percentage of searches for the given query for which no click occurred: 83.33
+the user query: wireless earbuds
+total number of clicks: 20
+total number of searches: 18
+---
+CTR in percentage, rounded to two decimals: 0.0
+average number of clicks per search for the given query: 0.0
+number of searches with clicks: 0
+percentage of searches for the given query for which no click occurred: 100.0
+the user query: wireless
+total number of clicks: 0
+total number of searches: 6
 
 
         ###FACTS
-        Total number of queries contained in the result: 1
+        Total number of queries contained in the result: 3
 
         "
 "
@@ -212,29 +230,45 @@ total number of searches: 9
         counts as fail. 
 
         ###SEQUENCE
-        judgmentList:
-- b3cbbba5-eea7-4cbf-8ed3-e433ae15a140
-querySetId: 39a8876f-aa5a-4166-9868-41b267462d07
+        judgmentList: []
+querySetId: 60f5fa32-33ef-452b-809b-41ba437bf318
 searchConfigurationList:
-- b5964125-a7f0-4f85-bcaa-e78554661220
+- 14b84cfe-c402-4153-9968-34b8e90093f1
+- 8103d14e-d1f9-4985-8742-947318876e27
 status: COMPLETED
-type: HYBRID_OPTIMIZER
+type: PAIRWISE_COMPARISON
+---
+judgmentList: []
+querySetId: b6cbab1b-bbee-4137-bf28-88c4ea63b1a5
+searchConfigurationList:
+- 103de2f4-3c13-4807-8185-c0165048436e
+- 6462b003-add7-4fcc-a16a-793438927522
+status: COMPLETED
+type: PAIRWISE_COMPARISON
+---
+judgmentList: []
+querySetId: bef99d70-195a-4c2a-8d80-418792d4b154
+searchConfigurationList:
+- ba288301-a2fb-49d5-8a3a-8ac1978a1658
+- cffbac6c-6273-474c-9cee-9c3e0922f473
+status: COMPLETED
+type: PAIRWISE_COMPARISON
 ---
 judgmentList:
-- 6d74bb53-7bee-44e9-81c9-4de255c73eeb
-querySetId: 11b2ec13-8aae-4d93-8efc-3c4b638ae939
+- 79297d95-5a01-43f5-bdc4-e65789f68bca
+querySetId: b2d08aac-d234-48e3-926e-6beebc7a0fae
 searchConfigurationList:
-- 315dda6b-eb25-4fcd-9b12-a2fa21bbd939
+- 36b0e267-9166-4e55-aade-46ddcc2371a9
 status: COMPLETED
 type: POINTWISE_EVALUATION
 ---
-judgmentList: []
-querySetId: 11b2ec13-8aae-4d93-8efc-3c4b638ae939
+judgmentList:
+- d75cb354-51d9-47f2-957f-eb946abf8c6f
+querySetId: e7a81691-aec8-49e9-9028-c3bd29cfa252
 searchConfigurationList:
-- 315dda6b-eb25-4fcd-9b12-a2fa21bbd939
-- 4f05826f-08a7-4fae-bbe1-af511d413a2a
+- bc3c6d85-d433-457f-9f0f-ab2db43959e8
 status: COMPLETED
-type: PAIRWISE_COMPARISON
+type: HYBRID_OPTIMIZER
 
 
         ###FACTS
@@ -266,7 +300,7 @@ type: PAIRWISE_COMPARISON
         counts as fail. 
 
         ###SEQUENCE
-        id: 70b48a6d-0fd8-45fc-a500-8c0627b58c25
+        id: f7be4ece-ecb6-4713-983d-35f1d0c82f44
 judgmentRatings:
 - query: 3 year old boy birthday gift
   ratings:
@@ -330,10 +364,10 @@ judgmentRatings:
     rating: '1.000'
 name: LLM Judgments for Product Search Query Set
 status: COMPLETED
-timestamp: '2026-03-28T14:59:53.579Z'
+timestamp: '2026-06-30T11:56:30.332Z'
 type: IMPORT_JUDGMENT
 ---
-id: 6d74bb53-7bee-44e9-81c9-4de255c73eeb
+id: 79297d95-5a01-43f5-bdc4-e65789f68bca
 judgmentRatings:
 - query: t towels kitchen
   ratings:
@@ -397,10 +431,10 @@ judgmentRatings:
     rating: '0.000'
 name: ESCI Judgments
 status: COMPLETED
-timestamp: '2026-03-28T14:59:52.849Z'
+timestamp: '2026-06-30T11:56:29.132Z'
 type: IMPORT_JUDGMENT
 ---
-id: b3cbbba5-eea7-4cbf-8ed3-e433ae15a140
+id: d75cb354-51d9-47f2-957f-eb946abf8c6f
 judgmentRatings:
 - query: red dress
   ratings:
@@ -428,10 +462,10 @@ judgmentRatings:
     rating: '0.000'
 name: Imported Judgments
 status: COMPLETED
-timestamp: '2026-03-28T14:59:52.782Z'
+timestamp: '2026-06-30T11:56:28.973Z'
 type: IMPORT_JUDGMENT
 ---
-id: e681d2fb-8e53-447b-a696-c969a323702c
+id: 9358f0cd-8871-4e0f-a2f1-4c2a1d70d436
 judgmentRatings:
 - query: yeezy
   ratings:
@@ -449,9 +483,9 @@ judgmentRatings:
   ratings:
   - docId: B07L9V4Y98
     rating: '0.000'
-  - docId: B001CRAWCQ
-    rating: '0.000'
   - docId: B01N0DSRJC
+    rating: '0.000'
+  - docId: B001CRAWCQ
     rating: '0.000'
   - docId: B075DGJZRM
     rating: '0.000'
@@ -483,9 +517,9 @@ judgmentRatings:
     rating: '0.000'
 - query: hp
   ratings:
-  - docId: B07PKPPBYX
-    rating: '0.000'
   - docId: B07SKFQJKT
+    rating: '0.000'
+  - docId: B07PKPPBYX
     rating: '0.000'
   - docId: B07MHVL3GR
     rating: '0.000'
@@ -495,7 +529,7 @@ judgmentRatings:
     rating: '0.000'
 name: Implicit Judgements
 status: COMPLETED
-timestamp: '2026-03-28T14:59:50.964Z'
+timestamp: '2026-06-30T11:56:27.343Z'
 type: UBI_JUDGMENT
 
 
@@ -528,25 +562,73 @@ type: UBI_JUDGMENT
         counts as fail. 
 
         ###SEQUENCE
-        id: 2e44b4a7-f93b-48f1-a0b1-ee8737859609
+        id: 8103d14e-d1f9-4985-8742-947318876e27
+index: ecommerce
+name: samsung-brand-priority-hypothesis
+query: '{\n  \'query\': {\n    \'multi_match\': {\n      \'query\': \'%SearchText%\'\
+  ,\n      \'fields\': [\'brand.keyword^20\', \'brand^10\', \'title^2\', \'bullet_points\'\
+  , \'category\', \'description\', \'color\'],\n      \'type\': \'best_fields\'\n\
+  \    }\n  }\n}'
+searchPipeline: ''
+---
+id: 14b84cfe-c402-4153-9968-34b8e90093f1
+index: ecommerce
+name: samsung-current-baseline-v2
+query: '{\n  \'query\': {\n    \'multi_match\': {\n      \'query\': \'%SearchText%\'\
+  ,\n      \'fields\': [\'id\', \'title\', \'category\', \'bullet_points\', \'description\'\
+  , \'brand\', \'color\'],\n      \'type\': \'best_fields\'\n    }\n  }\n}'
+searchPipeline: ''
+---
+id: 103de2f4-3c13-4807-8185-c0165048436e
+index: ecommerce
+name: samsung-baseline-multifield
+query: '{\n  \'query\': {\n    \'multi_match\': {\n      \'query\': \'%SearchText%\'\
+  ,\n      \'fields\': [\'brand\', \'color\', \'bullet_points\', \'category\', \'\
+  description\', \'title\'],\n      \'type\': \'best_fields\'\n    }\n  }\n}'
+searchPipeline: ''
+---
+id: 6462b003-add7-4fcc-a16a-793438927522
+index: ecommerce
+name: samsung-brand-boosted
+query: '{\n  \'query\': {\n    \'multi_match\': {\n      \'query\': \'%SearchText%\'\
+  ,\n      \'fields\': [\'brand^15\', \'title^2\', \'bullet_points\', \'category\'\
+  , \'description\', \'color\'],\n      \'type\': \'best_fields\'\n    }\n  }\n}'
+searchPipeline: ''
+---
+id: cffbac6c-6273-474c-9cee-9c3e0922f473
+index: ecommerce
+name: samsung-brand-boost-hypothesis
+query: '{'query': {'multi_match': {'query': '%SearchText%', 'fields': ['brand.keyword^20',
+  'brand^10', 'title^2', 'bullet_points', 'category', 'description', 'color'], 'type':
+  'best_fields'}}}'
+searchPipeline: ''
+---
+id: ba288301-a2fb-49d5-8a3a-8ac1978a1658
+index: ecommerce
+name: samsung-current-baseline
+query: '{'query': {'multi_match': {'query': '%SearchText%', 'fields': ['brand', 'color',
+  'bullet_points', 'category', 'description', 'id', 'title'], 'type': 'best_fields'}}}'
+searchPipeline: ''
+---
+id: 46d9240e-eb29-4a04-97ee-ac6f11bc9635
 index: ecommerce
 name: art_controlled
 query: '{'query':{'multi_match':{'query':'%SearchText%','fields':['id','title^2','category','bullets','description','Brand','Color']}}}'
 searchPipeline: ''
 ---
-id: b5964125-a7f0-4f85-bcaa-e78554661220
+id: bc3c6d85-d433-457f-9f0f-ab2db43959e8
 index: ecommerce
 name: hybrid_search_query
 query: '{'query':{'hybrid':{'queries':[{'multi_match':{'query':'%SearchText%','fields':['id','title','category','bullet_points','description','brand','color']}},{'neural':{'title_embedding':{'query_text':'%SearchText%','k':100,'model_id':'null'}}}]}},'size':10,'_source':['id','title','category','brand','image']}'
 searchPipeline: hybrid-search-pipeline
 ---
-id: 4f05826f-08a7-4fae-bbe1-af511d413a2a
+id: bf25aa9c-cb19-455e-ac21-5b634aa089cc
 index: ecommerce
 name: baseline with title weight
 query: '{'query':{'multi_match':{'query':'%SearchText%','fields':['id','title^25','category','bullet_points','description','brand','color']}}}'
 searchPipeline: ''
 ---
-id: 315dda6b-eb25-4fcd-9b12-a2fa21bbd939
+id: 36b0e267-9166-4e55-aade-46ddcc2371a9
 index: ecommerce
 name: baseline
 query: '{'query':{'multi_match':{'query':'%SearchText%','fields':['id','title','category','bullet_points','description','brand','color']}}}'
@@ -558,7 +640,7 @@ searchPipeline: ''
 
         ",
 "
-               Give me an overview of the query set with id '45900784-ae23-4198-92f6-62de8bff33a7'.
+               Give me an overview of the query set with id '60f5fa32-33ef-452b-809b-41ba437bf318'.
                Include the following attributes per query set: the id, name,
                description, timestamp and the actual query set. If the query set
                contains <= 10 elements, list the queries fully, otherwise
@@ -582,38 +664,30 @@ searchPipeline: ''
         counts as fail. When comparing the expected query set with the result, small query sets with <= 10 elements should be listed fully in the response and reflect the expectation, while for longer lists a subsample of 10 queries is sufficient. Make sure all of those queries also appear in the listed expectation.
 
         ###SEQUENCE
-        id: 45900784-ae23-4198-92f6-62de8bff33a7
-name: Representative Queries
+        id: 60f5fa32-33ef-452b-809b-41ba437bf318
+name: samsung-brand-query-test
 querySetQueries:
-- queryText: laptop stand
-- queryText: wireless earbuds
-- queryText: hoodie
-- queryText: wine glass
-- queryText: rc cars
-- queryText: toys for boys
-- queryText: lego friends
-- queryText: othoking bamboo charging station
-- queryText: phone charger
-- queryText: alarm clock
-- queryText: karaoke microphone
-timestamp: '2026-03-28T14:59:53.462Z'
+- queryText: samsung
+timestamp: '2026-06-30T18:57:20.519Z'
 
 
         ###FACTS
         {}
 
         ",
-"Analyze the top 20 queries performance by engagement
-                in the index 'test_event_index'. Only consider queries with at least
+"Analyze the top 20 queries performance by engagement.
+                Take the search/query volume from the query index 'test_query_index'
+                and the click (event) counts from the event index 'test_event_index'.
+                Only consider queries with at least
                 5 searches, and over a time range of 30
                 days. Determine the following properties per query:
                 total query volume, searches with clicks and total number of clicks,
                 average clicks per search, the zero click rate and ctr.
-                The latter two give in percentages formatted with two decimals. 
+                The latter two give in percentages formatted with two decimals.
                 Also state how many queries matched the above filter criteria.
                 Do not use grouping delimiter for amounts over one thousand, only use decimal
                 delimiter where applicable.
-                ","icontains-all: 0","llm-rubric: 
+                ","icontains-all: shoe super,300,106,220,35.33,0.73,64.67,nintendo switch,200,57,600,28.50,3,71.50,sweet trousers green,400,71,540,17.75,1.35,82.25,ninhendo swithc,200,0,0,0,0,100,4","llm-rubric: 
         Below under the header '###SEQUENCE' a few expected results are listed in yaml format.
         Each root element in the yaml listing refers to a single result.
         The keys in the yaml format are a description of the meaning under which the
@@ -632,17 +706,48 @@ timestamp: '2026-03-28T14:59:53.462Z'
         counts as fail. 
 
         ###SEQUENCE
-        
+        CTR in percentage, rounded to two decimals: 35.33
+average number of clicks per search for the given query: 0.73
+number of searches with clicks: 106
+percentage of searches for the given query for which no click occurred: 64.67
+the user query: shoe super
+total number of clicks: 220
+total number of searches: 300
+---
+CTR in percentage, rounded to two decimals: 28.5
+average number of clicks per search for the given query: 3.0
+number of searches with clicks: 57
+percentage of searches for the given query for which no click occurred: 71.5
+the user query: nintendo switch
+total number of clicks: 600
+total number of searches: 200
+---
+CTR in percentage, rounded to two decimals: 17.75
+average number of clicks per search for the given query: 1.35
+number of searches with clicks: 71
+percentage of searches for the given query for which no click occurred: 82.25
+the user query: sweet trousers green
+total number of clicks: 540
+total number of searches: 400
+---
+CTR in percentage, rounded to two decimals: 0.0
+average number of clicks per search for the given query: 0.0
+number of searches with clicks: 0
+percentage of searches for the given query for which no click occurred: 100.0
+the user query: ninhendo swithc
+total number of clicks: 0
+total number of searches: 200
+
 
         ###FACTS
-        Total number of queries contained in the result: 0
+        Total number of queries contained in the result: 4
 
         "
 "Analyze the performance of the product with document_id 'shoe_low1'
             in the index 'test_event_index'.
             For the given document, provide the total number of impressions, the
             total number of clicks, ctr in percentage (rounded and formatted to 2 decimals)
-            and the average click position.","icontains-all: 0,0,0","llm-rubric: 
+            and the average click position.","icontains-all: 20,2,10","llm-rubric: 
         Below under the header '###SEQUENCE' a few expected results are listed in yaml format.
         Each root element in the yaml listing refers to a single result.
         The keys in the yaml format are a description of the meaning under which the
@@ -661,11 +766,11 @@ timestamp: '2026-03-28T14:59:53.462Z'
         counts as fail. 
 
         ###SEQUENCE
-        CTR in percentage, rounded to two decimals: 0.0
+        CTR in percentage, rounded to two decimals: 10.0
 average position in the search result for clicks on the document: null
 id of the document: shoe_low1
-number of times the document was clicked: 0
-number of times users saw the document: 0
+number of times the document was clicked: 2
+number of times users saw the document: 20
 
 
         ###FACTS
@@ -676,7 +781,7 @@ number of times users saw the document: 0
             in the index 'test_event_index'.
             For the given document, provide the total number of impressions, the
             total number of clicks, ctr in percentage (rounded and formatted to 2 decimals)
-            and the average click position.","icontains-all: 0,0,0","llm-rubric: 
+            and the average click position.","icontains-all: 20,20,100","llm-rubric: 
         Below under the header '###SEQUENCE' a few expected results are listed in yaml format.
         Each root element in the yaml listing refers to a single result.
         The keys in the yaml format are a description of the meaning under which the
@@ -695,11 +800,11 @@ number of times users saw the document: 0
         counts as fail. 
 
         ###SEQUENCE
-        CTR in percentage, rounded to two decimals: 0.0
+        CTR in percentage, rounded to two decimals: 100.0
 average position in the search result for clicks on the document: null
 id of the document: shoe_high1
-number of times the document was clicked: 0
-number of times users saw the document: 0
+number of times the document was clicked: 20
+number of times users saw the document: 20
 
 
         ###FACTS
@@ -710,7 +815,7 @@ number of times users saw the document: 0
             in the index 'test_event_index'.
             For the given document, provide the total number of impressions, the
             total number of clicks, ctr in percentage (rounded and formatted to 2 decimals)
-            and the average click position.","icontains-all: 0,0,0","llm-rubric: 
+            and the average click position.","icontains-all: 50,1,2","llm-rubric: 
         Below under the header '###SEQUENCE' a few expected results are listed in yaml format.
         Each root element in the yaml listing refers to a single result.
         The keys in the yaml format are a description of the meaning under which the
@@ -729,11 +834,11 @@ number of times users saw the document: 0
         counts as fail. 
 
         ###SEQUENCE
-        CTR in percentage, rounded to two decimals: 0.0
+        CTR in percentage, rounded to two decimals: 2.0
 average position in the search result for clicks on the document: null
 id of the document: trousers_green_low1
-number of times the document was clicked: 0
-number of times users saw the document: 0
+number of times the document was clicked: 1
+number of times users saw the document: 50
 
 
         ###FACTS
@@ -744,7 +849,7 @@ number of times users saw the document: 0
             in the index 'test_event_index'.
             For the given document, provide the total number of impressions, the
             total number of clicks, ctr in percentage (rounded and formatted to 2 decimals)
-            and the average click position.","icontains-all: 0,0,0","llm-rubric: 
+            and the average click position.","icontains-all: 50,50,100","llm-rubric: 
         Below under the header '###SEQUENCE' a few expected results are listed in yaml format.
         Each root element in the yaml listing refers to a single result.
         The keys in the yaml format are a description of the meaning under which the
@@ -763,11 +868,11 @@ number of times users saw the document: 0
         counts as fail. 
 
         ###SEQUENCE
-        CTR in percentage, rounded to two decimals: 0.0
+        CTR in percentage, rounded to two decimals: 100.0
 average position in the search result for clicks on the document: null
 id of the document: trousers_green_high1
-number of times the document was clicked: 0
-number of times users saw the document: 0
+number of times the document was clicked: 50
+number of times users saw the document: 50
 
 
         ###FACTS
@@ -781,7 +886,7 @@ number of times users saw the document: 0
 "
         What are the worst performing queries of the past 30 days? 
         Go ahead with the analysis and directly come back to me with an answer.
-        ","icontains-all: spiderwire stealth",
+        ","icontains-any: spiderwire stealth,wireless earbuds,gold,wireless,wirel,wirele,wirelese,wirels",
 "Find the 10 worst performing queries.","llm-rubric: 
                 In the following I define categories and corresponding queries that should be mentioned under each category. 
                 The response can contain more, but the below should be contained:
@@ -822,7 +927,7 @@ number of times users saw the document: 0
         counts as fail. 
 
         ###SEQUENCE
-        id: 70b48a6d-0fd8-45fc-a500-8c0627b58c25
+        id: f7be4ece-ecb6-4713-983d-35f1d0c82f44
 judgmentRatings:
 - query: 3 year old boy birthday gift
   ratings:
@@ -886,7 +991,7 @@ judgmentRatings:
     rating: '1.000'
 name: LLM Judgments for Product Search Query Set
 status: COMPLETED
-timestamp: '2026-03-28T14:59:53.579Z'
+timestamp: '2026-06-30T11:56:30.332Z'
 type: IMPORT_JUDGMENT
 
 
@@ -918,7 +1023,30 @@ type: IMPORT_JUDGMENT
         counts as fail. When comparing the expected query set with the result, small query sets with <= 10 elements should be listed fully in the response and reflect the expectation, while for longer lists a subsample of 10 queries is sufficient. Make sure all of those queries also appear in the listed expectation.
 
         ###SEQUENCE
-        id: 45900784-ae23-4198-92f6-62de8bff33a7
+        id: 60f5fa32-33ef-452b-809b-41ba437bf318
+name: samsung-brand-query-test
+querySetQueries:
+- queryText: samsung
+timestamp: '2026-06-30T18:57:20.519Z'
+---
+id: b6cbab1b-bbee-4137-bf28-88c4ea63b1a5
+name: samsung-test-queries
+querySetQueries:
+- queryText: samsung
+- queryText: samsung phone
+- queryText: samsung tablet
+- queryText: samsung earbuds
+timestamp: '2026-06-30T16:41:06.873Z'
+---
+id: bef99d70-195a-4c2a-8d80-418792d4b154
+name: samsung-test-queries
+querySetQueries:
+- queryText: samsung
+- queryText: samsung phone
+- queryText: samsung galaxy
+timestamp: '2026-06-30T16:14:00.385Z'
+---
+id: 249e389c-38a4-4466-81da-d4e662706647
 name: Representative Queries
 querySetQueries:
 - queryText: laptop stand
@@ -931,9 +1059,9 @@ querySetQueries:
 - queryText: othoking bamboo charging station
 - queryText: phone charger
 - queryText: alarm clock
-timestamp: '2026-03-28T14:59:53.462Z'
+timestamp: '2026-06-30T11:56:30.208Z'
 ---
-id: 11b2ec13-8aae-4d93-8efc-3c4b638ae939
+id: b2d08aac-d234-48e3-926e-6beebc7a0fae
 name: ESCI Queries
 querySetQueries:
 - queryText: t towels kitchen
@@ -946,29 +1074,7 @@ querySetQueries:
 - queryText: 1.75 leather belts without buckles
 - queryText: the one for whom food is not enough gorman
 - queryText: thin leather strap
-timestamp: '2026-03-28T14:59:50.577Z'
----
-id: 39a8876f-aa5a-4166-9868-41b267462d07
-name: TVs
-querySetQueries:
-- queryText: tv
-- queryText: led tv
-timestamp: '2026-03-28T14:59:50.541Z'
----
-id: d175d8e6-b3d7-41e5-af4f-fe622293086b
-name: Top 20
-querySetQueries:
-- queryText: black iphone 14 pro max case
-- queryText: tv
-- queryText: bacl
-- queryText: printer
-- queryText: black laptop case
-- queryText: wireless earbuds
-- queryText: apple watch
-- queryText: laptop
-- queryText: gaming chair
-- queryText: shoes
-timestamp: '2026-03-28T14:59:48.412Z'
+timestamp: '2026-06-30T11:56:26.361Z'
 
 
         ###FACTS

@@ -70,7 +70,8 @@ def get_query_sets_llm_rubric_assertion(data: list[QuerySetResults]) -> str:
 def create_query_set_test_case(top_n: int,
                                max_num_queries_per_set: int = 10) -> TestCase:
     result: list[QuerySetResults] = [x.model_copy(update={"querySetQueries": x.querySetQueries[:max_num_queries_per_set]}) for x in get_query_sets()]
-    result = reversed(sorted(result, key=lambda x: x.timestamp))
+    # Prompt asks for the last top_n most recently created; slice to match.
+    result = list(reversed(sorted(result, key=lambda x: x.timestamp)))[:top_n]
 
     return TestCase(
         prompt=f"""

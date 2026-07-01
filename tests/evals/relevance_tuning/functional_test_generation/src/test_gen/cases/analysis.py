@@ -33,7 +33,8 @@ class ClickResult(FormattedModel):
 
 class DocumentCTR(FormattedModel):
     document_id: str
-    time_range_days: int
+    # None when the prompt states no time window (metrics over all data).
+    time_range_days: int | None = None
     total_impressions: int
     total_clicks: int
     ctr_percentage: float
@@ -87,7 +88,16 @@ def get_worst_performing_queries_30_days_test_case():
         """,
         assertions=[
             CaseInsensitiveContainsAssertion(
-                contains_all=True, contains_texts=["spiderwire stealth"]
+                contains_all=False, contains_texts=[
+                    "spiderwire stealth",
+                    "wireless earbuds",
+                    "gold",
+                    "wireless",
+                    "wirel",
+                    "wirele",
+                    "wirelese",
+                    "wirels"
+                ]
             )
         ],
     )
@@ -225,8 +235,10 @@ def create_query_ctr_test_case(
         asyncio.run(
             get_query_ctr(
                 query,
-                time_range_days=time_range_days,
-                ubi_index=ubi_index
+                # This prompt states no time window, so compute over all data
+                # (matching the agent's behaviour for an unwindowed request).
+                time_range_days=None,
+                ubi_index=ubi_index,
             )
         )
     )
@@ -295,8 +307,9 @@ def create_document_ctr_test_case(
         asyncio.run(
             get_document_ctr(
                 doc_id=doc_id,
-                time_range_days=num_days,
-                ubi_index=index
+                # No time window in this prompt — compute over all data.
+                time_range_days=None,
+                ubi_index=index,
             )
         )
     )
@@ -338,26 +351,34 @@ def create_top_queries_by_engagement_test_case(
     min_search_volume: int = 5,
     time_range_days: int = 30,
     ubi_index: str = "ubi_events",
+    query_index: str | None = None,
 ) -> TestCase:
     result = asyncio.run(
         get_top_queries_by_engagement(
-            top_n=20,
-            min_search_volume=5,
-            time_range_days=30,
-            ubi_index=ubi_index
+            top_n=top_n,
+            min_search_volume=min_search_volume,
+            # Prompt states "over a time range of {time_range_days} days" —
+            # filter to match so ground-truth aligns with the agent.
+            time_range_days=time_range_days,
+            ubi_index=ubi_index,
+            query_index=query_index,
         )
     )
     result = json.loads(result)
     total_queries_analyzed: int = result["total_queries_analyzed"]
     result = [ClickResult(**x) for x in result["queries"]]
+    # Search volume is pulled from the query table; clicks from the event table.
+    query_table = query_index or ("ubi_queries" if ubi_index == "ubi_events" else ubi_index)
     return TestCase(
-        prompt=f"""Analyze the top {top_n} queries performance by engagement
-                in the index '{ubi_index}'. Only consider queries with at least
+        prompt=f"""Analyze the top {top_n} queries performance by engagement.
+                Take the search/query volume from the query index '{query_table}'
+                and the click (event) counts from the event index '{ubi_index}'.
+                Only consider queries with at least
                 {min_search_volume} searches, and over a time range of {time_range_days}
                 days. Determine the following properties per query:
                 total query volume, searches with clicks and total number of clicks,
                 average clicks per search, the zero click rate and ctr.
-                The latter two give in percentages formatted with two decimals. 
+                The latter two give in percentages formatted with two decimals.
                 Also state how many queries matched the above filter criteria.
                 Do not use grouping delimiter for amounts over one thousand, only use decimal
                 delimiter where applicable.

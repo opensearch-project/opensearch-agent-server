@@ -181,21 +181,33 @@ def compose_events_by_doc_filters(
     filter_rule: Callable[[Entries.Doc], bool],
     num_events: int,
     action_name: Entries.ValidEventAction,
+    query_id_pool: Collection[str],
 ):
+    """Compose per-doc events, assigning each event a query_id from
+    ``query_id_pool`` round-robin. This lets one search instance (query_id) carry
+    multiple events and guarantees every event references a search that exists in
+    the query table (so searches_with_clicks <= search_volume by construction)."""
     filtered_docs = [x for x in docs if filter_rule(x)]
+    pool = list(query_id_pool)
     all_events = []
+    counter = 0
     for doc in filtered_docs:
-        all_events.extend(
-            [
+        for _ in range(num_events):
+            if not pool:
+                raise ValueError(
+                    "query_id_pool is empty but events were requested; ensure "
+                    "num_queries (and num_clicking_searches for clicks) is large enough."
+                )
+            all_events.append(
                 Entries.UbiEventDoc(
+                    query_id=pool[counter % len(pool)],
                     action_name=action_name,
                     user_query=user_query,
                     doc_id=doc.asin,
                     position=None,
                 )
-                for _ in range(num_events)
-            ]
-        )
+            )
+            counter += 1
     return all_events
 
 
@@ -228,6 +240,7 @@ class ScenarioGeneration:
         other_field: DocField = "description",  # field where the token to be boosted is in the low performers
         event_name: Literal["click", "add_to_cart"] = "click",
         num_queries: int = 300,
+        num_clicking_searches: int = 0,
         num_low_performer: int = 10,
         num_high_performer: int = 10,
         num_clicks_low_performer: int = 2,
@@ -303,12 +316,19 @@ class ScenarioGeneration:
             )
             for idx in range(num_high_performer)
         ]
+        # One search instance per query_id. Both tables reference these ids, so a
+        # query_id carries multiple events (impressions + clicks). Clicks land on
+        # a subset of searches, so CTR = num_clicking_searches / num_queries.
+        search_ids = [str(uuid.uuid4()) for _ in range(num_queries)]
+        clicking_ids = search_ids[:num_clicking_searches]
+
         low_performer_click_events = compose_events_by_doc_filters(
             user_query=query,
             docs=low_performer_docs,
             filter_rule=lambda x: True,
             num_events=num_clicks_low_performer,
             action_name=event_name,
+            query_id_pool=clicking_ids,
         )
         low_performer_impression_events = compose_events_by_doc_filters(
             user_query=query,
@@ -316,6 +336,7 @@ class ScenarioGeneration:
             filter_rule=lambda x: True,
             num_events=num_impressions_low_performer,
             action_name="impression",
+            query_id_pool=search_ids,
         )
         high_performer_click_events = compose_events_by_doc_filters(
             user_query=query,
@@ -323,6 +344,7 @@ class ScenarioGeneration:
             filter_rule=lambda x: True,
             num_events=num_clicks_high_performer,
             action_name=event_name,
+            query_id_pool=clicking_ids,
         )
         high_performer_impression_events = compose_events_by_doc_filters(
             user_query=query,
@@ -330,11 +352,12 @@ class ScenarioGeneration:
             filter_rule=lambda x: True,
             num_events=num_impressions_high_performer,
             action_name="impression",
+            query_id_pool=search_ids,
         )
 
-        # defining the query events
+        # one query-table row per search instance (same query_ids as the events)
         query_events = tuple(
-            [Entries.UbiQuery(user_query=query) for _ in range(num_queries)]
+            Entries.UbiQuery(query_id=qid, user_query=query) for qid in search_ids
         )
         return Scenario(
             docs=list(low_performer_docs) + list(high_performer_docs),
@@ -367,6 +390,7 @@ if __name__ == "__main__":
         other_field="description",
         event_name="click",
         num_queries=300,
+        num_clicking_searches=106,  # ~35.33% CTR (reflects current 220/620=35.48%)
         num_low_performer=10,
         num_high_performer=10,
         num_clicks_low_performer=2,
@@ -384,6 +408,7 @@ if __name__ == "__main__":
             other_field="description",
             event_name="click",
             num_queries=400,
+            num_clicking_searches=71,  # ~17.75% CTR (reflects current 540/3040=17.76%)
             num_low_performer=40,
             num_high_performer=10,
             num_clicks_low_performer=1,
@@ -402,6 +427,7 @@ if __name__ == "__main__":
             other_field="description",
             event_name="click",
             num_queries=200,
+            num_clicking_searches=0,  # misspelling: searched but no clicks/impressions
             num_low_performer=0,
             num_high_performer=0,
             num_clicks_low_performer=0,
@@ -421,6 +447,7 @@ if __name__ == "__main__":
             other_field="description",
             event_name="click",
             num_queries=200,
+            num_clicking_searches=57,  # ~28.5% CTR (reflects current 600/2100=28.57%)
             num_low_performer=10,
             num_high_performer=5,
             num_clicks_low_performer=10,
