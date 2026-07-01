@@ -42,31 +42,119 @@ class DocumentCTR(FormattedModel):
 
 
 
+def get_worst_queries(
+    zero_ctr_n: int = 8,
+    high_volume_n: int = 3,
+    time_range_days: int | None = None,
+    ubi_index: str = "ubi_events",
+) -> dict[str, list[ClickResult]]:
+    """Worst-performing queries pulled the SAME way the agent pulls them (via the
+    MCP-backed metric tool), split into the TWO groups the analysis should surface:
+
+      - "zero_ctr": queries nobody clicks (0% CTR), worst first by search volume —
+        a busy query with no clicks is the worst performer.
+      - "high_volume_low_ctr": the highest-VOLUME queries that still have a nonzero
+        but sub-optimal CTR (biggest improvement opportunities / potential high
+        impact). Derived by ranking on volume, NOT by lowest CTR — a pure lowest-CTR
+        sort only yields zero-click queries and hides this group.
+
+    Recomputed at generation time so both groups always track the CURRENT index
+    instead of hard-coded query strings that drift as the data changes.
+    """
+    # top_n huge => the tool returns every query; we re-rank into the two groups.
+    all_metrics = json.loads(
+        asyncio.run(
+            get_query_performance_metrics(
+                query_text=None,
+                top_n=100_000,
+                time_range_days=time_range_days,
+                ubi_index=ubi_index,
+            )
+        )
+    )
+    # Drop anomalous rows with no real searches (0 volume but stray clicks) and
+    # blank query texts (nothing nameable for the assertion to match on).
+    real = [
+        ClickResult(**x) for x in all_metrics["queries"]
+        if x["search_volume"] > 0 and (x["query_text"] or "").strip()
+    ]
+    zero_ctr = sorted(
+        (q for q in real if q.ctr_percentage == 0),
+        key=lambda q: -q.search_volume,
+    )
+    high_volume_low_ctr = sorted(
+        (q for q in real if q.ctr_percentage > 0),
+        key=lambda q: (-q.search_volume, q.ctr_percentage),
+    )
+    return {
+        "zero_ctr": zero_ctr[:zero_ctr_n],
+        "high_volume_low_ctr": high_volume_low_ctr[:high_volume_n],
+    }
+
+
+def get_worst_queries_rubric(
+    zero_ctr: Collection[ClickResult],
+    high_volume_low_ctr: Collection[ClickResult],
+    min_zero_ctr: int,
+) -> str:
+    zero_list = "\n".join(
+        f"- {q.query_text} ({q.search_volume} searches, 0 clicks)" for q in zero_ctr
+    )
+    high_vol_list = "\n".join(
+        f"- {q.query_text} ({q.search_volume} searches, CTR {q.ctr_percentage:.2f}%)"
+        for q in high_volume_low_ctr
+    )
+    return f"""
+        The user asked for the worst performing queries. Using the same
+        user-behaviour data the agent has access to, the worst performers for the
+        CURRENT index fall into two groups.
+
+        Group A - zero click-through (nobody clicks these), worst first by volume:
+        {zero_list}
+
+        Group B - highest-VOLUME queries with a sub-optimal (nonzero) CTR, i.e. the
+        biggest improvement opportunities / potential high impact:
+        {high_vol_list}
+
+        Pass the assertion only if ALL of the following hold:
+        1) The response identifies poorly / worst performing queries and names AT
+           LEAST {min_zero_ctr} of the Group A queries above (match on the query
+           text; treat obvious typos or minor variants as matches).
+        2) The response ALSO calls out AT LEAST ONE of the Group B high-volume
+           queries above as a high-volume / high-impact query with room to improve
+           its CTR.
+        3) The response suggests next steps that include at least one of: generating
+           hypotheses, or analyzing the search results for the problematic queries.
+
+        Ignore ordering, grouping labels, exact CTR/volume numbers, and any extra
+        queries the response mentions beyond these lists.
+        """
+
+
 def get_worst_performing_queries_test_case():
+    # Ground truth pulled live from the index (not hard-coded) and matched loosely,
+    # but STILL covering both groups: zero-CTR queries AND high-volume low-CTR
+    # queries, so the assertion stays valid as the underlying data changes.
+    worst = get_worst_queries(time_range_days=None)
+    zero_ctr = worst["zero_ctr"]
+    high_volume_low_ctr = worst["high_volume_low_ctr"]
+    min_zero_ctr = min(3, len(zero_ctr))
+    all_texts = [q.query_text for q in zero_ctr] + [
+        q.query_text for q in high_volume_low_ctr
+    ]
     return TestCase(
         prompt="Find the 10 worst performing queries.",
         assertions=[
             LLMRubricAssertion(
-                eval_prompt="""
-                In the following I define categories and corresponding queries that should be mentioned under each category. 
-                The response can contain more, but the below should be contained:
-                a) Problematic queries with zero CTR: wirelese and 'spiderwire stealth',
-                b) high-volume queries with relatively low CTR, thus with potential high impact: gold, 'wireless earbun'.
-                Furthermore, the response shall contain next step suggestions including the options:
-                1) generate hypotheses,
-                2) analyze search results.
-                """
+                eval_prompt=get_worst_queries_rubric(
+                    zero_ctr, high_volume_low_ctr, min_zero_ctr
+                )
             ),
+            # Cheap sanity net: at least one of the computed worst queries appears.
             CaseInsensitiveContainsAssertion(
                 contains_all=False,
-                contains_texts=[
-                    "wirelese",
-                    "spiderwire stealth",
-                    "wi",
-                    "gold",
-                    "wireless earbun",
-                ],
-            )
+                contains_texts=all_texts,
+            ),
         ],
     )
 

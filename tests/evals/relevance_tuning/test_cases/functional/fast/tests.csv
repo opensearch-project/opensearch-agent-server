@@ -230,7 +230,31 @@ total number of searches: 6
         counts as fail. 
 
         ###SEQUENCE
-        judgmentList: []
+        judgmentList:
+- c87f1772-3e6c-4d91-8a1f-e7dc38753fe9
+querySetId: 9a41153c-1cec-438b-88da-d780c199b3cd
+searchConfigurationList:
+- ed0be1a2-39df-4154-806b-84608331d1d4
+status: COMPLETED
+type: POINTWISE_EVALUATION
+---
+judgmentList:
+- c8f33bd4-2bc3-4735-99b0-f9d7fcd705fb
+querySetId: 21af87ce-a8df-4cff-a5f3-aa4ea31d3f8e
+searchConfigurationList:
+- 039dba75-7d8e-46aa-a8b4-b8c7dc5e940d
+status: COMPLETED
+type: HYBRID_OPTIMIZER
+---
+judgmentList: []
+querySetId: 9a41153c-1cec-438b-88da-d780c199b3cd
+searchConfigurationList:
+- ed0be1a2-39df-4154-806b-84608331d1d4
+- 03e07b1a-3680-4627-b120-5e11d870371d
+status: COMPLETED
+type: PAIRWISE_COMPARISON
+---
+judgmentList: []
 querySetId: 60f5fa32-33ef-452b-809b-41ba437bf318
 searchConfigurationList:
 - 14b84cfe-c402-4153-9968-34b8e90093f1
@@ -245,30 +269,6 @@ searchConfigurationList:
 - 6462b003-add7-4fcc-a16a-793438927522
 status: COMPLETED
 type: PAIRWISE_COMPARISON
----
-judgmentList: []
-querySetId: bef99d70-195a-4c2a-8d80-418792d4b154
-searchConfigurationList:
-- ba288301-a2fb-49d5-8a3a-8ac1978a1658
-- cffbac6c-6273-474c-9cee-9c3e0922f473
-status: COMPLETED
-type: PAIRWISE_COMPARISON
----
-judgmentList:
-- 79297d95-5a01-43f5-bdc4-e65789f68bca
-querySetId: b2d08aac-d234-48e3-926e-6beebc7a0fae
-searchConfigurationList:
-- 36b0e267-9166-4e55-aade-46ddcc2371a9
-status: COMPLETED
-type: POINTWISE_EVALUATION
----
-judgmentList:
-- d75cb354-51d9-47f2-957f-eb946abf8c6f
-querySetId: e7a81691-aec8-49e9-9028-c3bd29cfa252
-searchConfigurationList:
-- bc3c6d85-d433-457f-9f0f-ab2db43959e8
-status: COMPLETED
-type: HYBRID_OPTIMIZER
 
 
         ###FACTS
@@ -300,7 +300,7 @@ type: HYBRID_OPTIMIZER
         counts as fail. 
 
         ###SEQUENCE
-        id: f7be4ece-ecb6-4713-983d-35f1d0c82f44
+        id: d7c531a9-7d70-4851-b89c-c01076f8c82d
 judgmentRatings:
 - query: 3 year old boy birthday gift
   ratings:
@@ -364,10 +364,10 @@ judgmentRatings:
     rating: '1.000'
 name: LLM Judgments for Product Search Query Set
 status: COMPLETED
-timestamp: '2026-06-30T11:56:30.332Z'
+timestamp: '2026-07-01T13:10:55.428Z'
 type: IMPORT_JUDGMENT
 ---
-id: 79297d95-5a01-43f5-bdc4-e65789f68bca
+id: c87f1772-3e6c-4d91-8a1f-e7dc38753fe9
 judgmentRatings:
 - query: t towels kitchen
   ratings:
@@ -431,10 +431,10 @@ judgmentRatings:
     rating: '0.000'
 name: ESCI Judgments
 status: COMPLETED
-timestamp: '2026-06-30T11:56:29.132Z'
+timestamp: '2026-07-01T13:10:54.745Z'
 type: IMPORT_JUDGMENT
 ---
-id: d75cb354-51d9-47f2-957f-eb946abf8c6f
+id: c8f33bd4-2bc3-4735-99b0-f9d7fcd705fb
 judgmentRatings:
 - query: red dress
   ratings:
@@ -462,10 +462,10 @@ judgmentRatings:
     rating: '0.000'
 name: Imported Judgments
 status: COMPLETED
-timestamp: '2026-06-30T11:56:28.973Z'
+timestamp: '2026-07-01T13:10:54.648Z'
 type: IMPORT_JUDGMENT
 ---
-id: 9358f0cd-8871-4e0f-a2f1-4c2a1d70d436
+id: ec628dc4-2a90-4edb-aa54-c27551b6c6a7
 judgmentRatings:
 - query: yeezy
   ratings:
@@ -475,9 +475,9 @@ judgmentRatings:
     rating: '0.000'
   - docId: B01IDSPDJI
     rating: '0.000'
-  - docId: B07QRCGL3G
-    rating: '0.000'
   - docId: B074V6Q1DR
+    rating: '0.000'
+  - docId: B07QRCGL3G
     rating: '0.000'
 - query: k cups
   ratings:
@@ -517,9 +517,9 @@ judgmentRatings:
     rating: '0.000'
 - query: hp
   ratings:
-  - docId: B07SKFQJKT
-    rating: '0.000'
   - docId: B07PKPPBYX
+    rating: '0.000'
+  - docId: B07SKFQJKT
     rating: '0.000'
   - docId: B07MHVL3GR
     rating: '0.000'
@@ -529,7 +529,7 @@ judgmentRatings:
     rating: '0.000'
 name: Implicit Judgements
 status: COMPLETED
-timestamp: '2026-06-30T11:56:27.343Z'
+timestamp: '2026-07-01T13:10:52.938Z'
 type: UBI_JUDGMENT
 
 
@@ -562,73 +562,25 @@ type: UBI_JUDGMENT
         counts as fail. 
 
         ###SEQUENCE
-        id: 8103d14e-d1f9-4985-8742-947318876e27
-index: ecommerce
-name: samsung-brand-priority-hypothesis
-query: '{\n  \'query\': {\n    \'multi_match\': {\n      \'query\': \'%SearchText%\'\
-  ,\n      \'fields\': [\'brand.keyword^20\', \'brand^10\', \'title^2\', \'bullet_points\'\
-  , \'category\', \'description\', \'color\'],\n      \'type\': \'best_fields\'\n\
-  \    }\n  }\n}'
-searchPipeline: ''
----
-id: 14b84cfe-c402-4153-9968-34b8e90093f1
-index: ecommerce
-name: samsung-current-baseline-v2
-query: '{\n  \'query\': {\n    \'multi_match\': {\n      \'query\': \'%SearchText%\'\
-  ,\n      \'fields\': [\'id\', \'title\', \'category\', \'bullet_points\', \'description\'\
-  , \'brand\', \'color\'],\n      \'type\': \'best_fields\'\n    }\n  }\n}'
-searchPipeline: ''
----
-id: 103de2f4-3c13-4807-8185-c0165048436e
-index: ecommerce
-name: samsung-baseline-multifield
-query: '{\n  \'query\': {\n    \'multi_match\': {\n      \'query\': \'%SearchText%\'\
-  ,\n      \'fields\': [\'brand\', \'color\', \'bullet_points\', \'category\', \'\
-  description\', \'title\'],\n      \'type\': \'best_fields\'\n    }\n  }\n}'
-searchPipeline: ''
----
-id: 6462b003-add7-4fcc-a16a-793438927522
-index: ecommerce
-name: samsung-brand-boosted
-query: '{\n  \'query\': {\n    \'multi_match\': {\n      \'query\': \'%SearchText%\'\
-  ,\n      \'fields\': [\'brand^15\', \'title^2\', \'bullet_points\', \'category\'\
-  , \'description\', \'color\'],\n      \'type\': \'best_fields\'\n    }\n  }\n}'
-searchPipeline: ''
----
-id: cffbac6c-6273-474c-9cee-9c3e0922f473
-index: ecommerce
-name: samsung-brand-boost-hypothesis
-query: '{'query': {'multi_match': {'query': '%SearchText%', 'fields': ['brand.keyword^20',
-  'brand^10', 'title^2', 'bullet_points', 'category', 'description', 'color'], 'type':
-  'best_fields'}}}'
-searchPipeline: ''
----
-id: ba288301-a2fb-49d5-8a3a-8ac1978a1658
-index: ecommerce
-name: samsung-current-baseline
-query: '{'query': {'multi_match': {'query': '%SearchText%', 'fields': ['brand', 'color',
-  'bullet_points', 'category', 'description', 'id', 'title'], 'type': 'best_fields'}}}'
-searchPipeline: ''
----
-id: 46d9240e-eb29-4a04-97ee-ac6f11bc9635
+        id: 8aafbd3d-bd01-4f80-9ec5-bf56b6b360d3
 index: ecommerce
 name: art_controlled
 query: '{'query':{'multi_match':{'query':'%SearchText%','fields':['id','title^2','category','bullets','description','Brand','Color']}}}'
 searchPipeline: ''
 ---
-id: bc3c6d85-d433-457f-9f0f-ab2db43959e8
+id: 039dba75-7d8e-46aa-a8b4-b8c7dc5e940d
 index: ecommerce
 name: hybrid_search_query
 query: '{'query':{'hybrid':{'queries':[{'multi_match':{'query':'%SearchText%','fields':['id','title','category','bullet_points','description','brand','color']}},{'neural':{'title_embedding':{'query_text':'%SearchText%','k':100,'model_id':'null'}}}]}},'size':10,'_source':['id','title','category','brand','image']}'
 searchPipeline: hybrid-search-pipeline
 ---
-id: bf25aa9c-cb19-455e-ac21-5b634aa089cc
+id: 03e07b1a-3680-4627-b120-5e11d870371d
 index: ecommerce
 name: baseline with title weight
 query: '{'query':{'multi_match':{'query':'%SearchText%','fields':['id','title^25','category','bullet_points','description','brand','color']}}}'
 searchPipeline: ''
 ---
-id: 36b0e267-9166-4e55-aade-46ddcc2371a9
+id: ed0be1a2-39df-4154-806b-84608331d1d4
 index: ecommerce
 name: baseline
 query: '{'query':{'multi_match':{'query':'%SearchText%','fields':['id','title','category','bullet_points','description','brand','color']}}}'
@@ -640,7 +592,7 @@ searchPipeline: ''
 
         ",
 "
-               Give me an overview of the query set with id '60f5fa32-33ef-452b-809b-41ba437bf318'.
+               Give me an overview of the query set with id 'd4e59d85-162c-4eb7-a60b-a0a3d9a64f35'.
                Include the following attributes per query set: the id, name,
                description, timestamp and the actual query set. If the query set
                contains <= 10 elements, list the queries fully, otherwise
@@ -664,11 +616,21 @@ searchPipeline: ''
         counts as fail. When comparing the expected query set with the result, small query sets with <= 10 elements should be listed fully in the response and reflect the expectation, while for longer lists a subsample of 10 queries is sufficient. Make sure all of those queries also appear in the listed expectation.
 
         ###SEQUENCE
-        id: 60f5fa32-33ef-452b-809b-41ba437bf318
-name: samsung-brand-query-test
+        id: d4e59d85-162c-4eb7-a60b-a0a3d9a64f35
+name: Representative Queries
 querySetQueries:
-- queryText: samsung
-timestamp: '2026-06-30T18:57:20.519Z'
+- queryText: laptop stand
+- queryText: wireless earbuds
+- queryText: hoodie
+- queryText: wine glass
+- queryText: rc cars
+- queryText: toys for boys
+- queryText: lego friends
+- queryText: othoking bamboo charging station
+- queryText: phone charger
+- queryText: alarm clock
+- queryText: karaoke microphone
+timestamp: '2026-07-01T13:10:55.321Z'
 
 
         ###FACTS
@@ -888,14 +850,39 @@ number of times users saw the document: 50
         Go ahead with the analysis and directly come back to me with an answer.
         ","icontains-any: spiderwire stealth,wireless earbuds,gold,wireless,wirel,wirele,wirelese,wirels",
 "Find the 10 worst performing queries.","llm-rubric: 
-                In the following I define categories and corresponding queries that should be mentioned under each category. 
-                The response can contain more, but the below should be contained:
-                a) Problematic queries with zero CTR: wirelese and 'spiderwire stealth',
-                b) high-volume queries with relatively low CTR, thus with potential high impact: gold, 'wireless earbun'.
-                Furthermore, the response shall contain next step suggestions including the options:
-                1) generate hypotheses,
-                2) analyze search results.
-                ","icontains-any: wirelese,spiderwire stealth,wi,gold,wireless earbun"
+        The user asked for the worst performing queries. Using the same
+        user-behaviour data the agent has access to, the worst performers for the
+        CURRENT index fall into two groups.
+
+        Group A - zero click-through (nobody clicks these), worst first by volume:
+        - wireless (12 searches, 0 clicks)
+- samsung (6 searches, 0 clicks)
+- futon frames full size without mattress (4 searches, 0 clicks)
+- gaming chair (4 searches, 0 clicks)
+- ereader 16 (3 searches, 0 clicks)
+- bacl (3 searches, 0 clicks)
+- wirelese (3 searches, 0 clicks)
+- wallmount (3 searches, 0 clicks)
+
+        Group B - highest-VOLUME queries with a sub-optimal (nonzero) CTR, i.e. the
+        biggest improvement opportunities / potential high impact:
+        - gold (42 searches, CTR 23.81%)
+- wireless earbuds (36 searches, CTR 22.22%)
+- laptop (10 searches, CTR 40.00%)
+
+        Pass the assertion only if ALL of the following hold:
+        1) The response identifies poorly / worst performing queries and names AT
+           LEAST 3 of the Group A queries above (match on the query
+           text; treat obvious typos or minor variants as matches).
+        2) The response ALSO calls out AT LEAST ONE of the Group B high-volume
+           queries above as a high-volume / high-impact query with room to improve
+           its CTR.
+        3) The response suggests next steps that include at least one of: generating
+           hypotheses, or analyzing the search results for the problematic queries.
+
+        Ignore ordering, grouping labels, exact CTR/volume numbers, and any extra
+        queries the response mentions beyond these lists.
+        ","icontains-any: wireless,samsung,futon frames full size without mattress,gaming chair,ereader 16,bacl,wirelese,wallmount,gold,wireless earbuds,laptop"
 "
         Help me improve the query samsung under the current search setup.
         ","llm-rubric: 
@@ -927,7 +914,7 @@ number of times users saw the document: 50
         counts as fail. 
 
         ###SEQUENCE
-        id: f7be4ece-ecb6-4713-983d-35f1d0c82f44
+        id: d7c531a9-7d70-4851-b89c-c01076f8c82d
 judgmentRatings:
 - query: 3 year old boy birthday gift
   ratings:
@@ -991,7 +978,7 @@ judgmentRatings:
     rating: '1.000'
 name: LLM Judgments for Product Search Query Set
 status: COMPLETED
-timestamp: '2026-06-30T11:56:30.332Z'
+timestamp: '2026-07-01T13:10:55.428Z'
 type: IMPORT_JUDGMENT
 
 
@@ -1023,30 +1010,7 @@ type: IMPORT_JUDGMENT
         counts as fail. When comparing the expected query set with the result, small query sets with <= 10 elements should be listed fully in the response and reflect the expectation, while for longer lists a subsample of 10 queries is sufficient. Make sure all of those queries also appear in the listed expectation.
 
         ###SEQUENCE
-        id: 60f5fa32-33ef-452b-809b-41ba437bf318
-name: samsung-brand-query-test
-querySetQueries:
-- queryText: samsung
-timestamp: '2026-06-30T18:57:20.519Z'
----
-id: b6cbab1b-bbee-4137-bf28-88c4ea63b1a5
-name: samsung-test-queries
-querySetQueries:
-- queryText: samsung
-- queryText: samsung phone
-- queryText: samsung tablet
-- queryText: samsung earbuds
-timestamp: '2026-06-30T16:41:06.873Z'
----
-id: bef99d70-195a-4c2a-8d80-418792d4b154
-name: samsung-test-queries
-querySetQueries:
-- queryText: samsung
-- queryText: samsung phone
-- queryText: samsung galaxy
-timestamp: '2026-06-30T16:14:00.385Z'
----
-id: 249e389c-38a4-4466-81da-d4e662706647
+        id: d4e59d85-162c-4eb7-a60b-a0a3d9a64f35
 name: Representative Queries
 querySetQueries:
 - queryText: laptop stand
@@ -1059,9 +1023,9 @@ querySetQueries:
 - queryText: othoking bamboo charging station
 - queryText: phone charger
 - queryText: alarm clock
-timestamp: '2026-06-30T11:56:30.208Z'
+timestamp: '2026-07-01T13:10:55.321Z'
 ---
-id: b2d08aac-d234-48e3-926e-6beebc7a0fae
+id: 9a41153c-1cec-438b-88da-d780c199b3cd
 name: ESCI Queries
 querySetQueries:
 - queryText: t towels kitchen
@@ -1074,7 +1038,29 @@ querySetQueries:
 - queryText: 1.75 leather belts without buckles
 - queryText: the one for whom food is not enough gorman
 - queryText: thin leather strap
-timestamp: '2026-06-30T11:56:26.361Z'
+timestamp: '2026-07-01T13:10:52.019Z'
+---
+id: 21af87ce-a8df-4cff-a5f3-aa4ea31d3f8e
+name: TVs
+querySetQueries:
+- queryText: tv
+- queryText: led tv
+timestamp: '2026-07-01T13:10:51.966Z'
+---
+id: e3965fe8-4dc6-47e1-a016-f9e445d28693
+name: Top 20
+querySetQueries:
+- queryText: black iphone 14 pro max case
+- queryText: tv
+- queryText: bacl
+- queryText: printer
+- queryText: black laptop case
+- queryText: wireless earbuds
+- queryText: apple watch
+- queryText: laptop
+- queryText: gaming chair
+- queryText: shoes
+timestamp: '2026-07-01T13:10:49.435Z'
 
 
         ###FACTS

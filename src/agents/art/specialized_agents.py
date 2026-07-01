@@ -162,6 +162,11 @@ Listing / overviewing resources (experiments, judgment lists, query sets, search
   the compact JSON the tool returns — every id, timestamp, name, status, type, query,
   docId, rating and query text verbatim. NEVER add, drop, reorder, or invent any of it,
   and never fill in values from your own knowledge.
+  For judgment ratings you MUST pair every rating with its docId. Render each rating as
+  "docId: rating" (or a docId/rating table). NEVER collapse them into a bare list of
+  scores — a score with no docId next to it is a failed answer.
+    DO:    query "hat": B078TDQC3G: 2.0, B073TWLRW9: 3.0, B07F1P55G5: 3.0, ...
+    DON'T: query "hat": scores 2.0, 3.0, 3.0, ...
 
 - For experiments and search configurations (smaller payloads), report the requested
   details directly from the search output — do NOT summarize them away:
@@ -223,8 +228,14 @@ performing / lowest-CTR) queries, cover BOTH categories and name the specific qu
   (a) zero-click (0% CTR) queries — include them even at low search volume (a query
       searched a few times with no clicks is a worst performer); do NOT apply a
       minimum-search-volume floor that would hide them.
-  (b) HIGH-VOLUME queries with a low (but nonzero) CTR — these are the highest-impact
-      problems and must be called out separately.
+  (b) HIGH-VOLUME queries with a low (but nonzero) CTR — the highest-impact problems.
+      Find these by ranking queries by SEARCH VOLUME (highest first) and reporting the
+      busiest queries whose CTR is still well below 100%. Do NOT derive this group from
+      the lowest-CTR sort — that only surfaces zero-click queries and will hide the
+      high-volume ones. ALWAYS include this group as a distinct section even when many
+      zero-CTR queries exist (do not let zero-CTR queries fill every slot); name at
+      least the one or two busiest sub-optimal-CTR queries explicitly, with their
+      search volume and CTR.
 Suggest next steps that include BOTH generating hypotheses AND analyzing the search results
 for the problematic queries. (The min-volume filter is only for "best/top by engagement"
 rankings, for statistical significance.)
