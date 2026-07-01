@@ -33,7 +33,6 @@ from src.test_gen.cases.model_cases import \
     create_investigate_query_improvement_by_spell_correction_test_case, get_samsung_query_improvement_test_case, \
     get_field_boost_offline_eval_test_case, get_search_config_copy_and_adjust_test_case, \
     get_multi_step_analysis_test_case_1
-from src.test_gen.opensearch_client import get_client_manager
 from src.utils.mcp_retrieval import init_mcp, shutdown
 
 
@@ -180,18 +179,10 @@ tests: file://tests.csv
 
 
 if __name__ == "__main__":
-    # we are just calling here such that global object is set with the right credentials
-    # NOTE that the client manager will have the url and credentials set
-    # on the first call, all subsequent calls just reuse the same object
-    # (if the global object is not cleared)
     load_dotenv(f"{script_path}/../../../../../../.env")
-    # Direct client: still used for the search-relevance plugin reads (Category B).
-    get_client_manager(
-        opensearch_url=os.environ["TEST_GEN_OPENSEARCH_URL"],
-        username=os.environ["TEST_GEN_OPENSEARCH_USERNAME"],
-        password=os.environ["TEST_GEN_OPENSEARCH_PASSWORD"],
-    )
-    # MCP retrieval: UBI metric ground-truth goes through the agent's data path.
+    # All retrieval (UBI metric ground-truth AND search-relevance plugin reads)
+    # goes through the agent's data path — the OpenSearch MCP server. Initialising
+    # the shared client once here sets the credentials for every later call.
     init_mcp(
         username=os.environ["TEST_GEN_OPENSEARCH_USERNAME"],
         password=os.environ["TEST_GEN_OPENSEARCH_PASSWORD"],

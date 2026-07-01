@@ -562,10 +562,16 @@ type: UBI_JUDGMENT
         counts as fail. 
 
         ###SEQUENCE
-        id: 8aafbd3d-bd01-4f80-9ec5-bf56b6b360d3
+        id: ed0be1a2-39df-4154-806b-84608331d1d4
 index: ecommerce
-name: art_controlled
-query: '{'query':{'multi_match':{'query':'%SearchText%','fields':['id','title^2','category','bullets','description','Brand','Color']}}}'
+name: baseline
+query: '{'query':{'multi_match':{'query':'%SearchText%','fields':['id','title','category','bullet_points','description','brand','color']}}}'
+searchPipeline: ''
+---
+id: 03e07b1a-3680-4627-b120-5e11d870371d
+index: ecommerce
+name: baseline with title weight
+query: '{'query':{'multi_match':{'query':'%SearchText%','fields':['id','title^25','category','bullet_points','description','brand','color']}}}'
 searchPipeline: ''
 ---
 id: 039dba75-7d8e-46aa-a8b4-b8c7dc5e940d
@@ -574,16 +580,10 @@ name: hybrid_search_query
 query: '{'query':{'hybrid':{'queries':[{'multi_match':{'query':'%SearchText%','fields':['id','title','category','bullet_points','description','brand','color']}},{'neural':{'title_embedding':{'query_text':'%SearchText%','k':100,'model_id':'null'}}}]}},'size':10,'_source':['id','title','category','brand','image']}'
 searchPipeline: hybrid-search-pipeline
 ---
-id: 03e07b1a-3680-4627-b120-5e11d870371d
+id: 8aafbd3d-bd01-4f80-9ec5-bf56b6b360d3
 index: ecommerce
-name: baseline with title weight
-query: '{'query':{'multi_match':{'query':'%SearchText%','fields':['id','title^25','category','bullet_points','description','brand','color']}}}'
-searchPipeline: ''
----
-id: ed0be1a2-39df-4154-806b-84608331d1d4
-index: ecommerce
-name: baseline
-query: '{'query':{'multi_match':{'query':'%SearchText%','fields':['id','title','category','bullet_points','description','brand','color']}}}'
+name: art_controlled
+query: '{'query':{'multi_match':{'query':'%SearchText%','fields':['id','title^2','category','bullets','description','Brand','Color']}}}'
 searchPipeline: ''
 
 
@@ -859,10 +859,10 @@ number of times users saw the document: 50
 - samsung (6 searches, 0 clicks)
 - gaming chair (4 searches, 0 clicks)
 - futon frames full size without mattress (4 searches, 0 clicks)
-- wireless earbud (3 searches, 0 clicks)
-- wireless earbudsrucksack (3 searches, 0 clicks)
-- printer cartridge (3 searches, 0 clicks)
-- soundbar  (3 searches, 0 clicks)
+- ereader 16gb (3 searches, 0 clicks)
+- wireles (3 searches, 0 clicks)
+- wi (3 searches, 0 clicks)
+- wirelese (3 searches, 0 clicks)
 
         Group B - highest-VOLUME queries with a sub-optimal (nonzero) CTR, i.e. the
         biggest improvement opportunities / potential high impact:
@@ -882,7 +882,7 @@ number of times users saw the document: 50
 
         Ignore ordering, grouping labels, exact CTR/volume numbers, and any extra
         queries the response mentions beyond these lists.
-        ","icontains-any: wireless,samsung,gaming chair,futon frames full size without mattress,wireless earbud,wireless earbudsrucksack,printer cartridge,soundbar ,gold,wireless earbuds,laptop"
+        ","icontains-any: wireless,samsung,gaming chair,futon frames full size without mattress,ereader 16gb,wireles,wi,wirelese,gold,wireless earbuds,laptop"
 "
         Help me improve the query samsung under the current search setup.
         ","llm-rubric: 

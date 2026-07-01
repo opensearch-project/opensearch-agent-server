@@ -34,7 +34,6 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "opensearch-py",
     "mcp>=1.9.0",
     "strands-agents[ollama,otel]>=1.30.0",
     "openinference-instrumentation-bedrock",

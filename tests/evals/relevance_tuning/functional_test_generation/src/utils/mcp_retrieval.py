@@ -73,6 +73,25 @@ def _require_client() -> MCPClient:
     return _client
 
 
+def _parse_tool_response(res: Any, tool_name: str) -> dict[str, Any]:
+    """Extract the JSON OpenSearch response from an MCP tool result.
+
+    The search tools wrap their JSON in a human-readable prefix, which is
+    stripped here by seeking the first ``{``.
+    """
+    content = res.content if hasattr(res, "content") else res.get("content", [])
+    parts = []
+    for block in content:
+        txt = getattr(block, "text", None) or (block.get("text") if isinstance(block, dict) else None)
+        if txt:
+            parts.append(txt)
+    raw = "\n".join(parts)
+    brace = raw.find("{")
+    if brace < 0:
+        raise RuntimeError(f"Unexpected {tool_name} response: {raw[:300]}")
+    return json.loads(raw[brace:])
+
+
 def search(index: str, query_dsl: dict[str, Any], size: int = 0) -> dict[str, Any]:
     """Run a search via SearchIndexTool and return the parsed OpenSearch response.
 
@@ -84,17 +103,24 @@ def search(index: str, query_dsl: dict[str, Any], size: int = 0) -> dict[str, An
         str(uuid.uuid4()), SEARCH_TOOL,
         {"index": index, "query_dsl": query_dsl, "size": size},
     )
-    content = res.content if hasattr(res, "content") else res.get("content", [])
-    parts = []
-    for block in content:
-        txt = getattr(block, "text", None) or (block.get("text") if isinstance(block, dict) else None)
-        if txt:
-            parts.append(txt)
-    raw = "\n".join(parts)
-    brace = raw.find("{")
-    if brace < 0:
-        raise RuntimeError(f"Unexpected {SEARCH_TOOL} response for '{index}': {raw[:300]}")
-    return json.loads(raw[brace:])
+    return _parse_tool_response(res, SEARCH_TOOL)
+
+
+def search_relevance(tool_name: str, query_body: dict[str, Any]) -> dict[str, Any]:
+    """Search a search-relevance plugin resource via its dedicated MCP tool and
+    return the parsed OpenSearch response (``{"hits": {"hits": [...]}}``).
+
+    ``tool_name`` is one of SearchExperimentsTool / SearchJudgmentsTool /
+    SearchQuerySetsTool / SearchSearchConfigurationsTool. These reads go through
+    the SAME MCP server the agent uses (no direct source-system access). Always
+    request full ``_source`` in ``query_body`` — SearchJudgmentsTool strips the
+    ratings otherwise.
+    """
+    client = _require_client()
+    res = client.call_tool_sync(
+        str(uuid.uuid4()), tool_name, {"query_body": query_body}
+    )
+    return _parse_tool_response(res, tool_name)
 
 
 def shutdown() -> None:

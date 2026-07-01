@@ -1,11 +1,14 @@
 # This module contains some of the tools used to actually generate
 # tests from existing indices.
 #
-# UBI metric ground-truth (query/document CTR) is computed via the SAME path the
-# agent under test uses: raw aggregations are fetched through the OpenSearch MCP
-# server (src.utils.mcp_retrieval.search) and handed to the shared compute tools
-# (tools.art.ubi_metrics_tools). The search-relevance plugin reads further below
-# still use the direct OpenSearch client.
+# ALL retrieval goes through the OpenSearch MCP server — the SAME data path the
+# agent under test uses (no direct source-system access):
+#   * UBI metric ground-truth (query/document CTR): raw aggregations via
+#     src.utils.mcp_retrieval.search (SearchIndexTool) handed to the shared
+#     compute tools (tools.art.ubi_metrics_tools).
+#   * Search-relevance plugin reads (experiments / judgments / query sets /
+#     search configurations): via src.utils.mcp_retrieval.search_relevance and
+#     the dedicated Search*Tool for each resource.
 #
 # NOTE: ``time_range_days`` applies a last-N-days timestamp filter when set
 # (default 30); pass None to compute over all data. Displayed values are rounded
@@ -13,13 +16,28 @@
 import json
 from decimal import ROUND_HALF_UP, Decimal
 
-from src.test_gen.opensearch_client import OpenSearchClientManager, get_client_manager
-from src.utils.mcp_retrieval import search
+from src.utils.mcp_retrieval import search, search_relevance
 from tools.art.ubi_metrics_tools import compute_document_ctr, compute_ubi_metrics
 from utils.logging_helpers import get_logger
 from utils.tool_utils import format_tool_error, log_tool_error
 
 logger = get_logger(__name__)
+
+# Search-relevance plugin reads via MCP. Request full _source (SearchJudgmentsTool
+# strips ratings otherwise) and a size large enough to list every resource.
+_SR_LIST_BODY = {
+    "query": {"match_all": {}},
+    "size": 1000,
+    "_source": {"includes": ["*"]},
+}
+
+
+def _sr_by_id_body(resource_id: str) -> dict:
+    return {
+        "query": {"term": {"id": resource_id}},
+        "size": 1,
+        "_source": {"includes": ["*"]},
+    }
 
 CLICK_ACTION = "click"
 IMPRESSION_ACTION = "impression"
@@ -63,11 +81,7 @@ async def list_experiment() -> str:
         str: JSON string containing list of experiments
     """
     try:
-        client_manager: OpenSearchClientManager = get_client_manager()
-        sr_client = client_manager.get_search_relevance_client()
-
-        response = sr_client.get_experiments()
-
+        response = search_relevance("SearchExperimentsTool", _SR_LIST_BODY)
         return json.dumps(response, indent=2)
     except Exception as e:
         return format_tool_error(f"Error listing experiments: {str(e)}")
@@ -81,12 +95,7 @@ async def list_judgment_list() -> str:
         str: JSON string containing list of judgments
     """
     try:
-        client_manager: OpenSearchClientManager = get_client_manager()
-        sr_client = client_manager.get_search_relevance_client()
-
-        # Get all judgments
-        response = sr_client.get_judgments()
-
+        response = search_relevance("SearchJudgmentsTool", _SR_LIST_BODY)
         return json.dumps(response, indent=2)
     except Exception as e:
         return log_tool_error(logger, f"Error listing judgments: {str(e)}")
@@ -103,11 +112,7 @@ async def get_judgment(judgment_id: str) -> str:
         str: JSON string containing the judgment details
     """
     try:
-        client_manager: OpenSearchClientManager = get_client_manager()
-        sr_client = client_manager.get_search_relevance_client()
-
-        response = sr_client.get_judgments(judgment_id=judgment_id)
-
+        response = search_relevance("SearchJudgmentsTool", _sr_by_id_body(judgment_id))
         return json.dumps(response, indent=2)
     except Exception as e:
         return log_tool_error(logger, f"Error retrieving judgment: {str(e)}")
@@ -121,11 +126,7 @@ async def list_query_set() -> str:
         str: JSON string containing list of query sets
     """
     try:
-        client_manager: OpenSearchClientManager = get_client_manager()
-        sr_client = client_manager.get_search_relevance_client()
-
-        response = sr_client.get_query_sets()
-
+        response = search_relevance("SearchQuerySetsTool", _SR_LIST_BODY)
         return json.dumps(response, indent=2)
     except Exception as e:
         return log_tool_error(logger, f"Error listing query sets: {str(e)}")
@@ -142,11 +143,7 @@ async def get_query_set(query_set_id: str) -> str:
         str: JSON string containing the query set details
     """
     try:
-        client_manager: OpenSearchClientManager = get_client_manager()
-        sr_client = client_manager.get_search_relevance_client()
-
-        response = sr_client.get_query_sets(query_set_id=query_set_id)
-
+        response = search_relevance("SearchQuerySetsTool", _sr_by_id_body(query_set_id))
         return json.dumps(response, indent=2)
     except Exception as e:
         return log_tool_error(logger, f"Error retrieving query set: {str(e)}")
@@ -160,12 +157,7 @@ async def list_search_configuration() -> str:
         str: JSON string containing list of search configurations
     """
     try:
-        client_manager: OpenSearchClientManager = get_client_manager()
-        sr_client = client_manager.get_search_relevance_client()
-
-        # Get all search configurations
-        response = sr_client.get_search_configurations()
-
+        response = search_relevance("SearchSearchConfigurationsTool", _SR_LIST_BODY)
         return json.dumps(response, indent=2)
     except Exception as e:
         return log_tool_error(logger, f"Error listing search configurations: {str(e)}")
