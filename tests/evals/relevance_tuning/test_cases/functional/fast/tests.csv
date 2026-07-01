@@ -857,12 +857,12 @@ number of times users saw the document: 50
         Group A - zero click-through (nobody clicks these), worst first by volume:
         - wireless (12 searches, 0 clicks)
 - samsung (6 searches, 0 clicks)
-- futon frames full size without mattress (4 searches, 0 clicks)
 - gaming chair (4 searches, 0 clicks)
-- ereader 16 (3 searches, 0 clicks)
-- bacl (3 searches, 0 clicks)
-- wirelese (3 searches, 0 clicks)
-- wallmount (3 searches, 0 clicks)
+- futon frames full size without mattress (4 searches, 0 clicks)
+- wireless earbud (3 searches, 0 clicks)
+- wireless earbudsrucksack (3 searches, 0 clicks)
+- printer cartridge (3 searches, 0 clicks)
+- soundbar  (3 searches, 0 clicks)
 
         Group B - highest-VOLUME queries with a sub-optimal (nonzero) CTR, i.e. the
         biggest improvement opportunities / potential high impact:
@@ -882,7 +882,7 @@ number of times users saw the document: 50
 
         Ignore ordering, grouping labels, exact CTR/volume numbers, and any extra
         queries the response mentions beyond these lists.
-        ","icontains-any: wireless,samsung,futon frames full size without mattress,gaming chair,ereader 16,bacl,wirelese,wallmount,gold,wireless earbuds,laptop"
+        ","icontains-any: wireless,samsung,gaming chair,futon frames full size without mattress,wireless earbud,wireless earbudsrucksack,printer cartridge,soundbar ,gold,wireless earbuds,laptop"
 "
         Help me improve the query samsung under the current search setup.
         ","llm-rubric: 

@@ -27,6 +27,7 @@ from tools.art.experiment_tools import (
 from tools.art.overview_tools import (
     get_judgment_lists_overview,
     get_query_sets_overview,
+    get_search_configurations_overview,
 )
 from tools.art.overview_tools import set_mcp_client as set_overview_mcp_client
 from tools.art.ubi_metrics_tools import compute_document_ctr, compute_ubi_metrics
@@ -147,31 +148,33 @@ Listing / overviewing resources (experiments, judgment lists, query sets, search
   SearchSearchConfigurationsTool):
     {"query": {"match_all": {}}, "sort": [{"timestamp": {"order": "desc"}}], "size": N}
 
-- Judgment-list and query-set overviews — do NOT transcribe raw search output yourself
-  (these lists can hold hundreds of ratings/queries and you WILL make mistakes). Use the
-  truncation tools:
+- Judgment-list, query-set and search-configuration overviews — do NOT transcribe raw
+  search output yourself (these can hold hundreds of ratings/queries or long query DSLs
+  and you WILL make mistakes or summarise them away). Use the truncation tools:
 
   Use the dedicated overview tools — they retrieve AND truncate in one call. Do NOT call
-  SearchJudgmentsTool / SearchQuerySetsTool yourself for an overview, and NEVER answer
-  from memory.
+  SearchJudgmentsTool / SearchQuerySetsTool / SearchSearchConfigurationsTool yourself for
+  an overview, and NEVER answer from memory.
   * Judgment lists -> GetJudgmentListsOverviewTool(last_n, max_queries, max_ratings)
     (e.g. last 4 lists, first 5 queries, first 5 ratings per query).
   * Query sets -> GetQuerySetsOverviewTool(last_n, max_queries)
     (e.g. last 5 sets, 10 queries).
-  Set last_n / max_queries / max_ratings to what the user asked for. Then report EXACTLY
-  the compact JSON the tool returns — every id, timestamp, name, status, type, query,
-  docId, rating and query text verbatim. NEVER add, drop, reorder, or invent any of it,
-  and never fill in values from your own knowledge.
+  * Search configurations -> GetSearchConfigurationsOverviewTool(max_configs)
+    (e.g. first 10 configs, each with its FULL query DSL and search pipeline).
+  Set last_n / max_queries / max_ratings / max_configs to what the user asked for. Then
+  report EXACTLY the compact JSON the tool returns — every id, timestamp, name, status,
+  type, index, query text, FULL query DSL, search pipeline, docId and rating verbatim.
+  NEVER add, drop, reorder, summarise, or invent any of it, and never fill in values from
+  your own knowledge. For search configurations this means the complete query DSL for each
+  config — NOT a high-level categorization or boosting summary like "modest title boost".
   For judgment ratings you MUST pair every rating with its docId. Render each rating as
   "docId: rating" (or a docId/rating table). NEVER collapse them into a bare list of
   scores — a score with no docId next to it is a failed answer.
     DO:    query "hat": B078TDQC3G: 2.0, B073TWLRW9: 3.0, B07F1P55G5: 3.0, ...
     DON'T: query "hat": scores 2.0, 3.0, 3.0, ...
 
-- For experiments and search configurations (smaller payloads), report the requested
+- For experiments (smaller payloads, no dedicated overview tool), report the requested
   details directly from the search output — do NOT summarize them away:
-  * Search configurations: the FULL query DSL for each, plus its id, name, index and
-    search pipeline (if any) — not a high-level categorization or boosting summary.
   * Experiments: every requested attribute per experiment (id, timestamp, type,
     querySetId, status, etc.).
 
@@ -496,6 +499,7 @@ async def evaluation_agent(query: str) -> str:
                 aggregate_experiment_results,
                 get_judgment_lists_overview,
                 get_query_sets_overview,
+                get_search_configurations_overview,
             ],
         )
 

@@ -40,6 +40,15 @@ def _recent_query_body(size: int) -> dict[str, Any]:
     }
 
 
+# Query body that returns resources (no recency sort — "the first N you find").
+def _all_query_body(size: int) -> dict[str, Any]:
+    return {
+        "query": {"match_all": {}},
+        "size": max(size, 1),
+        "_source": {"includes": ["*"]},
+    }
+
+
 def set_mcp_client(mcp_client: Any) -> None:
     """Inject the shared, started MCPClient so the overview tools can retrieve."""
     global _mcp_client
@@ -159,3 +168,47 @@ def get_query_sets_overview(
         })
     log_info_event(logger, "query-set overview built", "overview.query_sets", count=len(sets))
     return json.dumps({"query_sets": sets}, indent=2)
+
+
+@monitored_tool(
+    name="GetSearchConfigurationsOverviewTool",
+    description=(
+        "Returns a compact overview of the available search configurations — "
+        "retrieves them from OpenSearch and truncates in one step. ALWAYS use this "
+        "for a search-configuration overview; do NOT call "
+        "SearchSearchConfigurationsTool yourself. Keeps up to max_configs "
+        "configurations and, per configuration, its id, name, index, the FULL query "
+        "DSL and search pipeline. Report EXACTLY what it returns (ids, names, indexes, "
+        "full query DSL, search pipelines) — never add, drop, reorder, summarise, or "
+        "invent anything."
+    ),
+)
+def get_search_configurations_overview(
+    max_configs: int = 10,
+) -> str:
+    """Compact overview of up to max_configs search configurations (full DSL kept)."""
+    try:
+        sources = _mcp_search(
+            "SearchSearchConfigurationsTool", _all_query_body(max_configs)
+        )
+    except Exception as exc:  # noqa: BLE001 - surface a clean error to the agent
+        return json.dumps(
+            {"error": f"Could not retrieve search configurations: {exc}"}
+        )
+
+    configs: list[dict[str, Any]] = []
+    for s in sources[:max_configs]:
+        configs.append({
+            "id": s.get("id"),
+            "name": s.get("name"),
+            "index": s.get("index"),
+            "query": s.get("query"),
+            "searchPipeline": s.get("searchPipeline", ""),
+        })
+    log_info_event(
+        logger,
+        "search-config overview built",
+        "overview.search_configs",
+        count=len(configs),
+    )
+    return json.dumps({"search_configurations": configs}, indent=2)
