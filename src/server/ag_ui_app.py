@@ -67,6 +67,7 @@ from server.rate_limiting import (  # noqa: E402
 )
 from server.request_id_middleware import RequestIdMiddleware  # noqa: E402
 from server.run_routes import (  # noqa: E402
+    _extract_auth_headers,
     cancel_run_route,
     create_run_route,
     get_run_events_route,
@@ -634,6 +635,64 @@ async def cancel_run(run_id: str, request: Request) -> CancelRunResponse:
         persistence=persistence, run_id=run_id, request=request
     )
 
+@app.post("/invoke", tags=["invoke"])
+@rate_limit
+async def invoke(
+    request: Request,
+    orch: AgentOrchestrator = Depends(get_orchestrator),
+) -> JSONResponse:
+    """Non-streaming endpoint.
+
+    Runs the agent to completion and returns the final response as JSON.
+    Accepts a string query or message list (Strands Agent interface).
+    """
+    body = await request.json()
+    query = body.get("query")
+    messages = body.get("messages")
+    agent_name = body.get("agent")
+
+    if not query and not messages:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "Request must include 'query' or 'messages'.",
+                "error_type": "ValidationError",
+                "status": "error",
+            },
+        )
+
+    if messages:
+        prompt: str | list[dict] = [
+            {"role": m["role"], "content": [{"text": m["content"]}]}
+            for m in messages
+        ]
+    else:
+        prompt = query
+
+    forwarded_headers = _extract_auth_headers(request)
+
+    try:
+        response_text = await orch.invoke(
+            prompt=prompt,
+            agent_name=agent_name,
+            headers=forwarded_headers,
+        )
+        return JSONResponse(content={"response": response_text, "status": "success"})
+    except Exception as e:
+        log_info_event(
+            logger,
+            f"Invoke error: {e}",
+            "invoke.error",
+            error=str(e),
+        )
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "status": "error",
+            },
+        )
 
 if __name__ == "__main__":
     import uvicorn
