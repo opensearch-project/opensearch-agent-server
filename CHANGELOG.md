@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 ### Added
+- Unit coverage for exact, fallback, missing-default, and case-sensitive page-context routing (#9)
 - Support using Ollama as model provider
 - PPL reference skill and skills auto-discovery for the default agent
 
