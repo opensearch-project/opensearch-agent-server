@@ -60,6 +60,7 @@ from server.auth_middleware import (  # noqa: E402
     create_auth_middleware,
 )
 from server.config import ServerConfig, get_config  # noqa: E402
+from server.dsl_agent import wrap_inference_results  # noqa: E402
 from server.rate_limiting import (  # noqa: E402
     create_rate_limiter,
     get_rate_limit_decorator,
@@ -73,6 +74,7 @@ from server.run_routes import (  # noqa: E402
     get_run_events_route,
     get_run_route,
 )
+
 
 def _init_tracing() -> None:
     """Initialize OpenTelemetry tracing.
@@ -395,6 +397,24 @@ def create_app(config_override: ServerConfig | None = None) -> FastAPI:
             "ag_ui.art_agent_factory_ready",
         )
 
+        # Register the NLQ->DSL generator as the `dsl_generator` agent, reachable
+        # via POST /invoke (RFC #140). The engine is injected once; the agent
+        # adapter maps /invoke's (query, context) onto it.
+        from server.dsl_agent import DslInvokeAgent, set_dsl_generator
+        from server.dsl_generator import BedrockDslGenerator
+
+        set_dsl_generator(BedrockDslGenerator(opensearch_url))
+        orchestrator.register_agent_factory(
+            name="dsl_generator",
+            factory=DslInvokeAgent,
+            description="NLQ->DSL generation for agentic search (non-streaming, via /invoke)",
+        )
+        log_info_event(
+            logger,
+            "✓ dsl_generator agent registered (POST /invoke)",
+            "ag_ui.dsl_generator_ready",
+        )
+
         yield
 
     app = FastAPI(
@@ -650,6 +670,13 @@ async def invoke(
     query = body.get("query")
     messages = body.get("messages")
     agent_name = body.get("agent")
+    # Generic extensions: `context` is structured input forwarded verbatim to
+    # context-aware agents (e.g. DSL generation reads `index_name` from it);
+    # `response_format` opts into the ml-commons inference_results envelope so an
+    # ml-commons connector's passthrough can consume the reply. Both default to
+    # today's behavior, so existing callers are unaffected.
+    context = body.get("context")
+    response_format = body.get("response_format")
 
     if not query and not messages:
         return JSONResponse(
@@ -676,7 +703,10 @@ async def invoke(
             prompt=prompt,
             agent_name=agent_name,
             headers=forwarded_headers,
+            context=context,
         )
+        if response_format == "inference_results":
+            return JSONResponse(content=wrap_inference_results(response_text))
         return JSONResponse(content={"response": response_text, "status": "success"})
     except Exception as e:
         log_info_event(
@@ -693,6 +723,7 @@ async def invoke(
                 "status": "error",
             },
         )
+
 
 if __name__ == "__main__":
     import uvicorn

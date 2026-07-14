@@ -44,6 +44,7 @@ class TestInvokeEndpoint:
             prompt="What indexes exist?",
             agent_name=None,
             headers=None,
+            context=None,
         )
 
     def test_messages_list_returns_success(self, client, mock_orchestrator):
@@ -65,6 +66,7 @@ class TestInvokeEndpoint:
             prompt=expected_prompt,
             agent_name=None,
             headers=None,
+            context=None,
         )
 
     def test_explicit_agent_name(self, client, mock_orchestrator):
@@ -78,6 +80,7 @@ class TestInvokeEndpoint:
             prompt="hi",
             agent_name="decomposer",
             headers=None,
+            context=None,
         )
 
     def test_missing_query_and_messages_returns_400(self, client, mock_orchestrator):
@@ -133,6 +136,7 @@ class TestInvokeEndpoint:
             prompt="hi",
             agent_name=None,
             headers={"authorization": "Bearer test-token-123"},
+            context=None,
         )
 
     def test_empty_agent_response(self, client, mock_orchestrator):
@@ -145,3 +149,57 @@ class TestInvokeEndpoint:
         body = response.json()
         assert body["status"] == "success"
         assert body["response"] == ""
+
+    def test_context_forwarded_to_orchestrator(self, client, mock_orchestrator):
+        """The structured `context` object is passed through to the orchestrator."""
+        context = {"index_name": "products", "template_id": "product_search"}
+        response = client.post(
+            "/invoke",
+            json={"query": "red shoes", "agent": "dsl_generator", "context": context},
+        )
+
+        assert response.status_code == 200
+        mock_orchestrator.invoke.assert_called_once_with(
+            prompt="red shoes",
+            agent_name="dsl_generator",
+            headers=None,
+            context=context,
+        )
+
+    def test_response_format_inference_results_wraps_reply(
+        self, client, mock_orchestrator
+    ):
+        """response_format=inference_results wraps the reply in the ml-commons envelope."""
+        dsl = '{"query":{"match_all":{}}}'
+        mock_orchestrator.invoke = AsyncMock(return_value=dsl)
+
+        response = client.post(
+            "/invoke",
+            json={
+                "query": "everything",
+                "agent": "dsl_generator",
+                "context": {"index_name": "idx"},
+                "response_format": "inference_results",
+            },
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        # Enveloped shape, not {response, status}: the DSL is a string at
+        # output[0].result so a connector's passthrough can read it.
+        assert "response" not in body
+        result = body["inference_results"][0]["output"][0]["result"]
+        assert result == dsl
+        assert isinstance(result, str)
+
+    def test_default_response_format_unchanged(self, client, mock_orchestrator):
+        """Without response_format, the default {response, status} shape is returned."""
+        response = client.post(
+            "/invoke", json={"query": "hi", "response_format": "text"}
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["status"] == "success"
+        assert body["response"] == "This is the agent response."
+        assert "inference_results" not in body

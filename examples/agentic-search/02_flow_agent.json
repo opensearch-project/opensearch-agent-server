@@ -1,0 +1,20 @@
+{
+  "_comment": "FLOW agent with one ConnectorTool that delegates NLQ->DSL generation to the agent server. Register with POST /_plugins/_ml/agents/_register; type 'flow' selects MLAgentType.FLOW.",
+
+  "name": "Agentic Search Remote DSL Agent",
+  "type": "flow",
+  "description": "Single-tool FLOW agent that generates OpenSearch DSL via a connector to the agent server.",
+
+  "_comment_tools": "A single-tool FLOW agent returns the tool's output directly. connector_id is the connector registered from 01_connector.json. connector_action selects which connector action runs ('predict' here, matching that connector's action_type).",
+  "tools": [
+    {
+      "type": "ConnectorTool",
+      "name": "remote_dsl_generator",
+      "description": "Generates OpenSearch DSL from a natural-language question by calling the agent server.",
+      "parameters": {
+        "connector_id": "PASTE_CONNECTOR_ID_FROM_STEP_1",
+        "connector_action": "predict"
+      }
+    }
+  ]
+}

@@ -245,6 +245,7 @@ class AgentOrchestrator:
         prompt: str | list[dict],
         agent_name: str | None = None,
         headers: dict[str, str] | None = None,
+        context: dict[str, Any] | None = None,
     ) -> str:
         """Invoke an agent synchronously and return the final response.
 
@@ -255,6 +256,9 @@ class AgentOrchestrator:
             prompt: String query or message list for the Strands Agent.
             agent_name: Explicit agent name. If ``None``, uses the default agent.
             headers: Optional HTTP headers forwarded from the request.
+            context: Optional structured input forwarded verbatim to agents that
+                declare ``accepts_invoke_context`` (e.g. DSL generation, which
+                reads ``index_name`` from it). Ordinary Strands agents ignore it.
 
         Returns:
             The agent's final response as a string.
@@ -287,5 +291,13 @@ class AgentOrchestrator:
             agent_name=agent_name,
         )
 
-        result = await asyncio.to_thread(agent, prompt)
+        # Context-aware agents (e.g. DSL generation) opt in to receive the
+        # structured `context` and the forwarded bearer token. Ordinary Strands
+        # agents take only the prompt, so `context` never reaches them.
+        if getattr(agent, "accepts_invoke_context", False):
+            result = await asyncio.to_thread(
+                agent, prompt, context=context or {}, auth_token=token
+            )
+        else:
+            result = await asyncio.to_thread(agent, prompt)
         return str(result) if result else ""
