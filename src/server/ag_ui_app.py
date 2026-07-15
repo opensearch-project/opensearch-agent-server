@@ -73,6 +73,7 @@ from server.run_routes import (  # noqa: E402
     get_run_route,
 )
 
+
 def _init_tracing() -> None:
     """Initialize OpenTelemetry tracing.
 
@@ -305,6 +306,7 @@ def create_app(config_override: ServerConfig | None = None) -> FastAPI:
         # --- Orchestrator setup: register agent factories ---
         from agents.art.art_agent import create_art_agent
         from agents.default_agent import create_default_agent
+        from agents.skill_loader import load_all_skills
         from orchestrator.registry import AgentRegistration, AgentRegistry
         from orchestrator.router import PageContextRouter
 
@@ -360,11 +362,15 @@ def create_app(config_override: ServerConfig | None = None) -> FastAPI:
 
         context_config = StrandsAgentConfig(state_context_builder=_page_context_builder)
 
+        # Load skills once at startup. The result is reused across all
+        # requests — avoids per-request filesystem walks and file I/O.
+        skills = load_all_skills()
+
         # Register default agent factory.
         # Auth is handled by OboAuth (contextvars) — no headers needed.
         orchestrator.register_agent_factory(
             name="default",
-            factory=lambda: create_default_agent(opensearch_url),
+            factory=lambda: create_default_agent(opensearch_url, skills=skills),
             description="General OpenSearch assistant with MCP tools",
             config=context_config,
         )

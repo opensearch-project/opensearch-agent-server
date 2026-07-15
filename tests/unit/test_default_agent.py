@@ -78,21 +78,17 @@ class TestCreateDefaultAgent:
 
     def test_registers_mcp_tools(self, mock_mcp_tools: list[MagicMock]) -> None:
         """MCP tools from ``list_tools_sync()`` are forwarded to the strands Agent."""
-        with (
-            patch("agents.default_agent.load_all_skills", return_value=[]),
-            patch("agents.default_agent.Agent") as mock_agent_cls,
-        ):
-            create_default_agent("http://localhost:9200")
+        with patch("agents.default_agent.Agent") as mock_agent_cls:
+            create_default_agent("http://localhost:9200", skills=[])
 
         mock_agent_cls.assert_called_once()
         tools_kwarg = mock_agent_cls.call_args.kwargs["tools"]
         assert tools_kwarg == mock_mcp_tools
 
     def test_attaches_logging_agent_skills_plugin(self) -> None:
-        """When skills are discovered, a ``LoggingAgentSkills`` plugin is attached."""
+        """When skills are passed, a ``LoggingAgentSkills`` plugin is attached."""
         fake_skill = Skill(name="fake-skill", description="a fake")
-        with patch("agents.default_agent.load_all_skills", return_value=[fake_skill]):
-            agent = create_default_agent("http://localhost:9200")
+        agent = create_default_agent("http://localhost:9200", skills=[fake_skill])
 
         plugins = agent._plugin_registry._plugins
         assert "agent_skills" in plugins
@@ -100,18 +96,19 @@ class TestCreateDefaultAgent:
         assert isinstance(skills_plugin, LoggingAgentSkills)
         assert "fake-skill" in skills_plugin._skills
 
-    def test_no_skills_plugin_when_skills_dir_empty(self) -> None:
-        """Zero skills discovered → no ``agent_skills`` plugin attached."""
-        with patch("agents.default_agent.load_all_skills", return_value=[]):
-            agent = create_default_agent("http://localhost:9200")
+    def test_no_skills_plugin_when_skills_empty(self) -> None:
+        """Zero skills passed → no ``agent_skills`` plugin attached."""
+        agent = create_default_agent("http://localhost:9200", skills=[])
 
         assert "agent_skills" not in agent._plugin_registry._plugins
 
     @pytest.mark.parametrize("expected_name", EXPECTED_REPO_SKILLS)
     def test_real_skill_registered_in_plugin(self, expected_name: str) -> None:
         """End-to-end: each expected skill lands inside the ``agent_skills`` plugin."""
-        # Do NOT patch load_all_skills — let the real function run against the repo.
-        agent = create_default_agent("http://localhost:9200")
+        from agents.skill_loader import load_all_skills
+
+        skills = load_all_skills()
+        agent = create_default_agent("http://localhost:9200", skills=skills)
 
         plugins = agent._plugin_registry._plugins
         assert "agent_skills" in plugins

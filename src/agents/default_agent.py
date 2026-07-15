@@ -10,10 +10,9 @@ import os
 
 import httpx
 from mcp.client.streamable_http import streamable_http_client
-from strands import Agent, AgentSkills
+from strands import Agent, AgentSkills, Skill
 from strands.tools.mcp import MCPClient
 
-from agents.skill_loader import load_all_skills
 from server.constants import DEFAULT_MCP_SERVER_URL
 from utils.logging_helpers import get_logger, log_info_event
 from utils.obo_context import OboAuth
@@ -72,16 +71,18 @@ When answering:
 """
 
 
-def create_default_agent(opensearch_url: str) -> Agent:
+def create_default_agent(
+    opensearch_url: str,
+    skills: list[Skill] | None = None,
+) -> Agent:
     """Create the default agent with all OpenSearch MCP tools and skills.
 
     Connects to the OpenSearch MCP server via Streamable HTTP transport.
     The server URL defaults to ``http://localhost:3001/mcp`` and can be
     overridden with the ``MCP_SERVER_URL`` environment variable.
 
-    Auto-discovers and loads all skills from the ``skills/`` directory.
-    Each subdirectory with a ``SKILL.md`` file is loaded as a skill using
-    the Strands SDK ``AgentSkills`` plugin.
+    Skills are passed in pre-loaded (loaded once at startup by the caller)
+    to avoid per-request filesystem walks and file I/O.
 
     Authentication is handled by :class:`~utils.obo_context.OboAuth`.
     The orchestrator calls ``obo_auth.set_token()`` before each run to
@@ -91,6 +92,9 @@ def create_default_agent(opensearch_url: str) -> Agent:
     Args:
         opensearch_url: OpenSearch cluster URL (informational — the MCP
             server is assumed to already be configured for this cluster).
+        skills: Pre-loaded Skill instances to register with the agent via
+            the AgentSkills plugin. Loaded once at startup and reused
+            across requests to avoid per-request filesystem I/O.
 
     Returns:
         Configured Strands Agent with MCP tools and skills.
@@ -115,9 +119,6 @@ def create_default_agent(opensearch_url: str) -> Agent:
     mcp_client.start()
 
     tools = list(mcp_client.list_tools_sync())
-
-    # Discover bundled + user-configured skills.
-    skills = load_all_skills()
 
     # Prepare plugins list with AgentSkills if skills are available
     plugins = []
