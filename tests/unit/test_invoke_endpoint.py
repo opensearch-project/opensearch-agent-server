@@ -155,13 +155,13 @@ class TestInvokeEndpoint:
         context = {"index_name": "products", "template_id": "product_search"}
         response = client.post(
             "/invoke",
-            json={"query": "red shoes", "agent": "dsl_generator", "context": context},
+            json={"query": "red shoes", "agent": "agentic_search", "context": context},
         )
 
         assert response.status_code == 200
         mock_orchestrator.invoke.assert_called_once_with(
             prompt="red shoes",
-            agent_name="dsl_generator",
+            agent_name="agentic_search",
             headers=None,
             context=context,
         )
@@ -177,7 +177,7 @@ class TestInvokeEndpoint:
             "/invoke",
             json={
                 "query": "everything",
-                "agent": "dsl_generator",
+                "agent": "agentic_search",
                 "context": {"index_name": "idx"},
                 "response_format": "inference_results",
             },

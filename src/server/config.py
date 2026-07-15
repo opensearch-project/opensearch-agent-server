@@ -120,6 +120,13 @@ class ServerConfig(BaseSettings):
         default="http://localhost:9200",
         description="OpenSearch cluster URL (from OPENSEARCH_URL env var)",
     )
+    opensearch_verify_certs: bool = Field(
+        default=False,
+        description="Verify the OpenSearch cluster's TLS certificate when the "
+        "agentic-search agent fetches index mappings (from OPENSEARCH_VERIFY_CERTS "
+        "env var). Defaults to False to match the MCP path against the security "
+        "plugin's self-signed demo certificates.",
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -127,6 +134,7 @@ class ServerConfig(BaseSettings):
         """Handle env vars which don't have AG_UI_ prefix (OPENSEARCH_URL, PHOENIX_URL)."""
         if isinstance(data, dict):
             _inject_env_var(data, "opensearch_url", "OPENSEARCH_URL")
+            _inject_env_var(data, "opensearch_verify_certs", "OPENSEARCH_VERIFY_CERTS")
             _inject_env_var(data, "phoenix_url", "PHOENIX_URL")
             _inject_env_var(data, "phoenix_public_url", "PHOENIX_PUBLIC_URL")
         return data

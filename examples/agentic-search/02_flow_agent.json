@@ -9,7 +9,7 @@
   "tools": [
     {
       "type": "ConnectorTool",
-      "name": "remote_dsl_generator",
+      "name": "remote_agentic_search",
       "description": "Generates OpenSearch DSL from a natural-language question by calling the agent server.",
       "parameters": {
         "connector_id": "PASTE_CONNECTOR_ID_FROM_STEP_1",

@@ -60,13 +60,13 @@ from server.auth_middleware import (  # noqa: E402
     create_auth_middleware,
 )
 from server.config import ServerConfig, get_config  # noqa: E402
-from server.dsl_agent import wrap_inference_results  # noqa: E402
 from server.rate_limiting import (  # noqa: E402
     create_rate_limiter,
     get_rate_limit_decorator,
     setup_rate_limiting,
 )
 from server.request_id_middleware import RequestIdMiddleware  # noqa: E402
+from server.response_formats import wrap_inference_results  # noqa: E402
 from server.run_routes import (  # noqa: E402
     _extract_auth_headers,
     cancel_run_route,
@@ -397,22 +397,21 @@ def create_app(config_override: ServerConfig | None = None) -> FastAPI:
             "ag_ui.art_agent_factory_ready",
         )
 
-        # Register the NLQ->DSL generator as the `dsl_generator` agent, reachable
-        # via POST /invoke (RFC #140). The engine is injected once; the agent
-        # adapter maps /invoke's (query, context) onto it.
-        from server.dsl_agent import DslInvokeAgent, set_dsl_generator
-        from server.dsl_generator import BedrockDslGenerator
+        # Register the agentic-search agent (NLQ->DSL), reachable via POST /invoke
+        # (RFC #140). Built once here — the instance is stateless per request, so
+        # the same one is handed out each call while the model stays reused.
+        from agents.agentic_search import create_agentic_search_agent
 
-        set_dsl_generator(BedrockDslGenerator(opensearch_url))
+        agentic_search_agent = create_agentic_search_agent(opensearch_url)
         orchestrator.register_agent_factory(
-            name="dsl_generator",
-            factory=DslInvokeAgent,
+            name="agentic_search",
+            factory=lambda: agentic_search_agent,
             description="NLQ->DSL generation for agentic search (non-streaming, via /invoke)",
         )
         log_info_event(
             logger,
-            "✓ dsl_generator agent registered (POST /invoke)",
-            "ag_ui.dsl_generator_ready",
+            "✓ agentic_search agent factory registered",
+            "ag_ui.agentic_search_agent_factory_ready",
         )
 
         yield

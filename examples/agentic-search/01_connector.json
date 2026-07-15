@@ -1,8 +1,8 @@
 {
-  "_comment": "Connector that calls the agent server's /invoke endpoint, targeting the dsl_generator agent. Register with POST /_plugins/_ml/connectors/_create; the returned connector_id is referenced by the FLOW agent in 02_flow_agent.json.",
+  "_comment": "Connector that calls the agent server's /invoke endpoint, targeting the agentic_search agent. Register with POST /_plugins/_ml/connectors/_create; the returned connector_id is referenced by the FLOW agent in 02_flow_agent.json.",
 
   "name": "Agentic Search Remote DSL Connector",
-  "description": "Calls the agent server's /invoke endpoint (dsl_generator agent) to translate a natural-language query into OpenSearch DSL.",
+  "description": "Calls the agent server's /invoke endpoint (agentic_search agent, direct_dsl strategy) to translate a natural-language query into OpenSearch DSL.",
   "version": "1",
   "protocol": "http",
 
@@ -27,8 +27,8 @@
         "Authorization": "Bearer ${credential.token}"
       },
 
-      "_comment_request_body": "query is the NLQ; index_name rides in the generic 'context' object. Both are filled from the agent's runtime parameters at call time. agent selects the dsl_generator; response_format=inference_results makes /invoke return the envelope the passthrough below expects.",
-      "request_body": "{ \"query\": \"${parameters.question}\", \"agent\": \"dsl_generator\", \"context\": { \"index_name\": \"${parameters.index_name}\" }, \"response_format\": \"inference_results\" }",
+      "_comment_request_body": "query is the NLQ; index_name and the generation strategy ride in the generic 'context' object. All are filled from the agent's runtime parameters at call time. agent selects agentic_search; context.strategy selects direct_dsl (free-form DSL generation); response_format=inference_results makes /invoke return the envelope the passthrough below expects.",
+      "request_body": "{ \"query\": \"${parameters.question}\", \"agent\": \"agentic_search\", \"context\": { \"index_name\": \"${parameters.index_name}\", \"strategy\": \"direct_dsl\" }, \"response_format\": \"inference_results\" }",
 
       "_comment_post_process": "connector.post_process.mlcommons.passthrough reads the 'result' field from each inference output into ModelTensor.result, which is the field neural-search reads. Without it, the response is wrapped into dataAsMap instead.",
       "post_process_function": "connector.post_process.mlcommons.passthrough"

@@ -2,20 +2,20 @@
 
 These are example registrations for connecting an OpenSearch cluster's
 agentic-search path to the agent server's `/invoke` endpoint, targeting the
-`dsl_generator` agent. They are **configuration, not code** — JSON you POST to a
-running cluster's REST API. Fill in your own agent-server URL and credential
-before using them.
+`agentic_search` agent (with `context.strategy = direct_dsl`). They are
+**configuration, not code** — JSON you POST to a running cluster's REST API. Fill
+in your own agent-server URL and credential before using them.
 
 ## What's here
 
 | File | What it is |
 |---|---|
-| `01_connector.json` | ml-commons **connector** — describes the HTTP call to `/invoke` (dsl_generator agent). |
+| `01_connector.json` | ml-commons **connector** — describes the HTTP call to `/invoke` (agentic_search agent). |
 | `02_flow_agent.json` | ml-commons **FLOW agent** with one `ConnectorTool` that calls the connector. |
 
 No ml-commons Java is written: the connector and FLOW agent are registered via
 the cluster's REST API. The only code involved is the agent server's
-`dsl_generator` agent (`src/server/dsl_agent.py`), reached through `/invoke`.
+`agentic_search` agent (`src/agents/agentic_search/`), reached through `/invoke`.
 
 ## How the DSL reaches neural-search
 

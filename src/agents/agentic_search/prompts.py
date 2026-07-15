@@ -1,26 +1,18 @@
-"""Default NLQ->DSL generation engine for the ``dsl_generator`` agent.
+"""Prompt content and structured-output schema for agentic-search generation.
 
-Reads the target index mapping, prompts an LLM (Bedrock or Ollama, selected by
-``utils.model_factory.create_model``) to translate the natural-language question
-into an OpenSearch query body, and returns it as a JSON string. The generator is
-pluggable via :func:`server.dsl_agent.set_dsl_generator`; this is the default
-implementation.
+Holds the large, static NLQ->DSL ruleset and worked examples (assembled into
+``SYSTEM_BLOCKS`` with a trailing Bedrock cache point), the per-request user
+template, and the :class:`EmitSearch` structured-output schema. These are pure
+data — no cluster, model, or I/O — so they are shared by every generation
+strategy under this package (today: direct DSL; next: search-template fill).
 """
 
 from __future__ import annotations
 
-import json
-import logging
 from typing import Any
 
-from opensearchpy import OpenSearch
 from pydantic import BaseModel, ConfigDict, Field
-from strands import Agent
 from strands.types.content import SystemContentBlock
-
-from utils.model_factory import create_model
-
-logger = logging.getLogger(__name__)
 
 
 class EmitSearch(BaseModel):
@@ -40,9 +32,10 @@ class EmitSearch(BaseModel):
     )
 
 
-# The system prompt is assembled from the named rule/example blocks below. The
-# fallback query is returned when no mapping field is relevant to the question.
-DEFAULT_QUERY = '{"size":10,"query":{"match_all":{}}}'
+# Returned when generation fails or when no mapping field is relevant to the
+# question. A broad match_all keeps the upstream search degraded-but-working
+# instead of erroring.
+FALLBACK_DSL = '{"size":10,"query":{"match_all":{}}}'
 
 QUERY_TYPE_RULES = (
     "Use only fields present in the provided mapping; never invent names.\n"
@@ -67,8 +60,8 @@ QUERY_TYPE_RULES = (
     '- Top N items/products/documents: return top hits (set "size": N as an integer) and sort by the relevant metric(s). '
     "Do not use aggregations for item lists.\n"
     '- Neural retrieval size: set "k" >= "size" (e.g. heuristic, k = max(size*5, 100) and k<=ef_search).\n'
-    '- Spelling tolerance: match_phrase does NOT support fuzziness; use match or multi_match with "fuzziness": "AUTO" '
-    "when tolerant matching is needed.\n"
+    "- Spelling tolerance: match_phrase does NOT support fuzziness; use match or multi_match with "
+    '"fuzziness": "AUTO" when tolerant matching is needed.\n'
     "- Text operators (OR vs AND): default to OR for natural-language queries; to tighten, use minimum_should_match "
     '(e.g., "75%" requires ~75% of terms). Use AND only when every token is essential; if order/adjacency matters, '
     "use match_phrase. (Applies to match/multi_match.)\n"
@@ -171,7 +164,7 @@ OUTPUT_FORMAT_INSTRUCTIONS = (
     "- Use valid JSON only: standard double quotes for all keys/strings; no comments; no trailing commas.\n"
     "- In the `reason` field, briefly map each clause to the user's words.\n"
     "- If the request truly cannot be fulfilled because no remotely relevant fields exist, set `dsl` to EXACTLY:\n"
-    + DEFAULT_QUERY
+    + FALLBACK_DSL
     + "\n"
 )
 
@@ -258,7 +251,7 @@ EXAMPLE_11 = (
     "Example 11 - true fallback (no remotely relevant fields)\n"
     "Input: List satellites with periapsis above 400km.\n"
     'Mapping: { "properties": { "name": { "type": "text" }, "color": { "type": "keyword" } } }\n'
-    "Output: " + DEFAULT_QUERY + "\n"
+    "Output: " + FALLBACK_DSL + "\n"
 )
 
 EXAMPLE_12 = (
@@ -296,69 +289,20 @@ EXAMPLES = (
 _SYSTEM_PROMPT = PROMPT_PREFIX + "\n\n" + OUTPUT_FORMAT_INSTRUCTIONS + "\n" + EXAMPLES
 
 # The system prompt is a static ~3.3k-token prefix sent on every call. The
-# trailing cache point caches it (5-minute TTL) so it is not reprocessed each
-# request; the variable mapping and question live in the user message, after the
-# cached prefix. Passed as content blocks (not a plain string) so the cache
-# point survives to the Bedrock request.
-_SYSTEM_BLOCKS: list[SystemContentBlock] = [
+# trailing cache point caches it (5-minute TTL on Bedrock) so it is not
+# reprocessed each request; the variable mapping and question live in the user
+# message, after the cached prefix. Passed as content blocks (not a plain
+# string) so the cache point survives to the Bedrock request. The cache point is
+# Bedrock-only and is harmlessly ignored on other providers.
+SYSTEM_BLOCKS: list[SystemContentBlock] = [
     {"text": _SYSTEM_PROMPT},
     {"cachePoint": {"type": "default"}},
 ]
 
-_USER_PROMPT = """\
+USER_PROMPT = """\
 Question: {question}
 Index: {index_name}
 Mapping: {mapping}
 
 Emit the OpenSearch _search body for this question.
 """
-
-
-class BedrockDslGenerator:
-    """Reads an index mapping and prompts an LLM to generate OpenSearch DSL.
-
-    The model provider (Bedrock or Ollama) is selected by ``create_model`` from
-    the environment; the system prompt's cache point (see ``_SYSTEM_BLOCKS``)
-    applies on Bedrock and is harmlessly ignored on Ollama.
-    """
-
-    def __init__(self, opensearch_url: str) -> None:
-        self._opensearch_url = opensearch_url
-        # Built once and reused across calls (the provider/credentials are
-        # fixed for the process).
-        self._model = create_model()
-
-    def _client(self, auth_token: str | None) -> OpenSearch:
-        # The caller's bearer token is forwarded per request when provided;
-        # otherwise the client falls back to its environment configuration.
-        headers = {"Authorization": f"Bearer {auth_token}"} if auth_token else None
-        return OpenSearch(hosts=[self._opensearch_url], headers=headers, timeout=30)
-
-    def _fetch_mapping(self, index_name: str, auth_token: str | None) -> str:
-        client = self._client(auth_token)
-        mapping = client.indices.get_mapping(index=index_name)
-        return json.dumps(mapping)
-
-    def generate(
-        self, question: str, index_name: str, auth_token: str | None = None
-    ) -> str:
-        """Return the OpenSearch _search body as a JSON string for the NLQ."""
-        mapping = self._fetch_mapping(index_name, auth_token)
-        # A new Agent per call keeps each request stateless; the reused model
-        # carries the cost-bearing connection. The system prompt is passed as
-        # content blocks so its cache point reaches the request.
-        agent = Agent(
-            model=self._model,
-            system_prompt=_SYSTEM_BLOCKS,
-            tools=[],
-            callback_handler=None,
-        )
-        user_msg = _USER_PROMPT.format(
-            question=question, index_name=index_name, mapping=mapping
-        )
-        # Invoke with structured_output_model (not the deprecated
-        # structured_output(), which flattens the system prompt to a string and
-        # drops the cache point).
-        result = agent(user_msg, structured_output_model=EmitSearch).structured_output
-        logger.info("Generated DSL for index=%s (reason=%s)", index_name, result.reason)
-        return json.dumps(result.dsl)

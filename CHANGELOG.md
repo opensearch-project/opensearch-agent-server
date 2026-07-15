@@ -4,6 +4,8 @@
 ### Added
 - Support using Ollama as model provider
 - PPL reference skill and skills auto-discovery for the default agent
+- `agentic_search` agent (NLQ->OpenSearch DSL) reachable via `POST /invoke`, with a pluggable per-request generation strategy (`context.strategy`, default `direct_dsl`) and ml-commons connector/FLOW-agent example blueprints
+- `OPENSEARCH_VERIFY_CERTS` config to control TLS verification for the agentic-search mapping fetch
 
 ### Fixed
 - Default agent now respects `BEDROCK_INFERENCE_PROFILE_ARN` env var instead of silently falling back to a hardcoded Sonnet 4 model (fixes #94)

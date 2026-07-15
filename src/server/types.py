@@ -476,19 +476,3 @@ class CancelRunResponse(TypedDict):
     runId: str
     canceled: bool
     message: str
-
-
-class InferenceResultsResponse(TypedDict):
-    """ml-commons ``inference_results`` envelope returned by ``/invoke``.
-
-    Used when a caller sets ``response_format=inference_results`` (e.g. the
-    agentic-search connector). A connector's built-in passthrough post-processor
-    copies ``output[0].result`` into ``ModelTensor.result``.
-
-    Attributes:
-        inference_results: One result whose ``output[0].result`` is the agent's
-            reply (for the ``dsl_generator`` agent, the DSL query) as a string.
-
-    """
-
-    inference_results: list[dict[str, Any]]
