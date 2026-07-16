@@ -36,3 +36,7 @@ agent-quickstart/
 # OS files
 .DS_Store
 Thumbs.db
+
+# promptfoo index scenarios
+tests/evals/relevance_tuning/functional_test_generation/index_data/scenario*/
+tests/evals/relevance_tuning/test_cases/**/results/

@@ -1,0 +1,26 @@
+prompt,__expected1
+"
+        Create a new query set with the following queries:
+          laptop stand
+          wireless earbuds
+          hoodie
+          wine glass
+          rc cars
+          toys for boys
+          lego friends
+          othoking bamboo charging station
+          phone charger
+          alarm clock
+          karaoke microphone
+          samsung
+        ","llm-rubric: 
+                A new query set was created with the 12 queries mentioned in the prompt.
+                "
+"
+          Create a search configuration that searches across the fields
+          asin, title, category, bullet_points, description, brand, color with a multi_match
+          query and call it my_baseline_2. It searches the ecommerce index.
+            ","llm-rubric: 
+                One new search configuration with the name 'my_baseline_2' and a multi_match
+                query across the mentioned fields targeting the ecommerce index.
+                "

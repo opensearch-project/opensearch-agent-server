@@ -1,0 +1,19 @@
+
+description: "Config for tests from csv file"
+
+providers:
+  - id: 'file://../../../agent_request.py'
+    label: 'Orchestrator invocation'
+    config:
+      timeout: 3000000
+
+defaultTest:
+  options:
+    provider:
+      id: bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0
+      config:
+        region: us-east-1
+        max_tokens: 1024
+
+tests: file://tests.csv
+    

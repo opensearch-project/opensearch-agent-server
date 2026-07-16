@@ -1,0 +1,76 @@
+{
+  "settings": {
+    "index": {
+      "number_of_shards": 1,
+      "number_of_replicas": 0,
+      "mapping.total_fields.limit": 20000,
+      "knn": true
+    },
+    "analysis": {
+      "filter": {
+        "english_minimal_stem": {
+          "type": "stemmer",
+          "language": "minimal_english"
+        }
+      },
+      "analyzer": {
+        "english_stemmed": {
+          "type": "custom",
+          "tokenizer": "standard",
+          "filter": [
+            "lowercase",
+            "english_minimal_stem"
+          ]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "asin": {
+        "type": "keyword"
+      },
+      "category": {
+        "type": "text",
+        "analyzer": "english_stemmed",
+        "copy_to": [
+          "category_filter"
+        ]
+      },
+      "category_filter": {
+        "type": "keyword"
+      },
+      "title": {
+        "type": "text",
+        "analyzer": "english_stemmed"
+      },
+      "title_embedding": {
+        "type": "knn_vector",
+        "dimension": 384,
+        "method": {
+          "engine": "lucene",
+          "space_type": "l2",
+          "name": "hnsw",
+          "parameters": {}
+        }
+      },
+      "bullet_points": {
+        "type": "text",
+        "analyzer": "english_stemmed"
+      },
+      "description": {
+        "type": "text",
+        "analyzer": "english_stemmed"
+      },
+      "price": {
+        "type": "double"
+      },
+      "brand": {
+        "type": "keyword"
+      },
+      "color": {
+        "type": "keyword"
+      }
+    }
+  }
+}

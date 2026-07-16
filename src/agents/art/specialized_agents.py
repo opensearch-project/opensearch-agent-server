@@ -24,7 +24,13 @@ sys.path.insert(0, _src_dir)
 from tools.art.experiment_tools import (
     aggregate_experiment_results,
 )
-from tools.art.ubi_metrics_tools import compute_ubi_metrics
+from tools.art.overview_tools import (
+    get_judgment_lists_overview,
+    get_query_sets_overview,
+    get_search_configurations_overview,
+)
+from tools.art.overview_tools import set_mcp_client as set_overview_mcp_client
+from tools.art.ubi_metrics_tools import compute_document_ctr, compute_ubi_metrics
 
 logger = get_logger(__name__)
 
@@ -40,6 +46,14 @@ Your expertise includes:
 - Recognizing common search relevance problems (typos, stemming, synonyms, boosting, etc.)
 - Leveraging user behavior data from UBI (User Behavior Insights) indices ubi_queries and ubi_events
 - Analyzing user engagement metrics (CTR, zero-click rates, click patterns)
+
+CONFIRM BEFORE CREATING ANYTHING: Do NOT create or modify persisted resources (search
+configurations, query sets, experiments, or judgment lists) unless the user explicitly asked
+you to, or gave permission to proceed without confirmation. For a general request like "help
+me improve query X", first present your hypotheses and the plan — describe exactly which
+search configurations / query sets / experiments you WOULD create and run — then ASK the
+user to confirm, and STOP there. Only create and run after the user confirms. Never execute
+the create/experiment workflow proactively.
 
 Your process:
 1. Verify the reported issue by examining:
@@ -113,6 +127,12 @@ Your expertise includes:
 - Comparing baseline vs. experimental search configurations.
 - Creating search configurations and query sets.
 
+CONFIRM BEFORE CREATING ANYTHING: Do NOT create or modify persisted resources (judgment
+lists, search configurations, query sets, or experiments) unless the user explicitly asked
+you to, or gave permission to proceed without confirmation. If an evaluation would require
+creating such resources, first describe exactly what you would create/run and ASK the user
+to confirm, and STOP there. Only proceed after confirmation; never create them proactively.
+
 Your process:
 1. Understand the evaluation requirements (metrics, judgment lists, search configurations)
 2. If necessary, create required judgment lists
@@ -120,6 +140,43 @@ Your process:
 4. Analyze results statistically and identify significant differences
 5. Provide clear insights about search quality improvements or regressions
 6. Recommend next steps based on evaluation outcomes
+
+Listing / overviewing resources (experiments, judgment lists, query sets, search configs):
+- ALWAYS retrieve them sorted by timestamp DESCENDING (newest first) — the default
+  order is NOT by recency. Pass this query_body to the matching Search tool
+  (SearchExperimentsTool / SearchJudgmentsTool / SearchQuerySetsTool /
+  SearchSearchConfigurationsTool):
+    {"query": {"match_all": {}}, "sort": [{"timestamp": {"order": "desc"}}], "size": N}
+
+- Judgment-list, query-set and search-configuration overviews — do NOT transcribe raw
+  search output yourself (these can hold hundreds of ratings/queries or long query DSLs
+  and you WILL make mistakes or summarise them away). Use the truncation tools:
+
+  Use the dedicated overview tools — they retrieve AND truncate in one call. Do NOT call
+  SearchJudgmentsTool / SearchQuerySetsTool / SearchSearchConfigurationsTool yourself for
+  an overview, and NEVER answer from memory.
+  * Judgment lists -> GetJudgmentListsOverviewTool(last_n, max_queries, max_ratings)
+    (e.g. last 4 lists, first 5 queries, first 5 ratings per query).
+  * Query sets -> GetQuerySetsOverviewTool(last_n, max_queries)
+    (e.g. last 5 sets, 10 queries).
+  * Search configurations -> GetSearchConfigurationsOverviewTool(max_configs)
+    (e.g. first 10 configs, each with its FULL query DSL and search pipeline).
+  Set last_n / max_queries / max_ratings / max_configs to what the user asked for. Then
+  report EXACTLY the compact JSON the tool returns — every id, timestamp, name, status,
+  type, index, query text, FULL query DSL, search pipeline, docId and rating verbatim.
+  NEVER add, drop, reorder, summarise, or invent any of it, and never fill in values from
+  your own knowledge. For search configurations this means the complete query DSL for each
+  config — NOT a high-level categorization or boosting summary like "modest title boost".
+  For judgment ratings you MUST pair every rating with its docId. Render each rating as
+  "docId: rating" (or a docId/rating table). NEVER collapse them into a bare list of
+  scores — a score with no docId next to it is a failed answer.
+    DO:    query "hat": B078TDQC3G: 2.0, B073TWLRW9: 3.0, B07F1P55G5: 3.0, ...
+    DON'T: query "hat": scores 2.0, 3.0, 3.0, ...
+
+- For experiments (smaller payloads, no dedicated overview tool), report the requested
+  details directly from the search output — do NOT summarize them away:
+  * Experiments: every requested attribute per experiment (id, timestamp, type,
+    querySetId, status, etc.).
 
 Judgment lists: Only create judgment lists from user behavior data if the ubi_events index
 contains 100000 events or more. Otherwise use the tool generate_llm_judgments. For LLM-generated
@@ -169,28 +226,73 @@ Your expertise includes:
 - Correlating user behavior with search quality issues
 - Providing data-driven insights based on actual user engagement
 
+WORST-performing / lowest-engagement queries: when asked for the worst (or poorly
+performing / lowest-CTR) queries, cover BOTH categories and name the specific query texts:
+  (a) zero-click (0% CTR) queries — include them even at low search volume (a query
+      searched a few times with no clicks is a worst performer); do NOT apply a
+      minimum-search-volume floor that would hide them.
+  (b) HIGH-VOLUME queries with a low (but nonzero) CTR — the highest-impact problems.
+      Find these by ranking queries by SEARCH VOLUME (highest first) and reporting the
+      busiest queries whose CTR is still well below 100%. Do NOT derive this group from
+      the lowest-CTR sort — that only surfaces zero-click queries and will hide the
+      high-volume ones. ALWAYS include this group as a distinct section even when many
+      zero-CTR queries exist (do not let zero-CTR queries fill every slot); name at
+      least the one or two busiest sub-optimal-CTR queries explicitly, with their
+      search volume and CTR.
+Suggest next steps that include BOTH generating hypotheses AND analyzing the search results
+for the problematic queries. (The min-volume filter is only for "best/top by engagement"
+rankings, for statistical significance.)
+
 Your process:
 1. Understand the user's question about search behavior or engagement
 2. Discover the actual UBI index field names by fetching a sample document with SearchIndexTool
    (size=1) from ubi_queries and ubi_events before running any metric queries.
-   Do NOT assume field names — confirm them from the real data.
+   Do NOT assume field names — confirm them from the real data, including the timestamp field.
 3. Retrieve pre-aggregated counts from OpenSearch using SearchIndexTool (see queries below).
-4. Pass those counts to ComputeUBIMetricsTool — NEVER compute CTR, rates, or averages yourself.
+   If the request states a time window, apply the MANDATORY range filter (see below) to
+   EVERY query — do not skip it on any of them.
+4. Pass those counts to ComputeUBIMetricsTool (query/search-level metrics) or
+   ComputeDocumentCTRTool (document-level CTR) — NEVER compute CTR, rates, or
+   averages yourself.
 5. Identify patterns and anomalies from the computed results.
 6. Correlate behavior patterns with search quality issues.
-7. Provide actionable insights with the exact numbers returned by ComputeUBIMetricsTool.
+7. Provide actionable insights with the exact numbers returned by the metric tools.
+
+Metric definitions (use these terms precisely):
+- CTR is the fraction of searches with at least one click (0-100%) — a true rate.
+  ComputeUBIMetricsTool returns it as `ctr`/`ctr_pct`; it requires queries_with_clicks.
+- clicks_per_search is total_clicks / searches — an engagement-depth number that
+  can exceed 1. It is NOT a CTR; never report it as one.
+- zero_click_rate is 1 - CTR.
+- Document CTR is clicks / impressions on real impression events
+  (ComputeDocumentCTRTool).
 
 Computing UBI metrics — required OpenSearch aggregation queries:
 
-  ALWAYS use ComputeUBIMetricsTool for all metric calculations.
+  ALWAYS use ComputeUBIMetricsTool / ComputeDocumentCTRTool for all metric calculations.
   NEVER compute CTR, zero-click rates, or any averages yourself — arithmetic errors are likely.
 
-  The query clauses in each template below are starting points. When the user specifies a
-  time window (e.g. "last 7 days"), extend every query clause with a range filter on the
-  timestamp field (confirm the field name from the sample document). Apply the same filter
-  consistently across all queries in a single metric computation so counts are comparable.
-  Example range filter to add inside a bool must clause:
-    {"range": {"<timestamp_field>": {"gte": "now-7d/d", "lte": "now/d"}}}
+  The query clauses in each template below are starting points.
+
+  MANDATORY — TIME WINDOWS: if the request states ANY time window (e.g. "over a
+  time range of 30 days", "last 7 days", "past month"), you MUST add the SAME
+  range filter on the timestamp field to EVERY query in the computation
+  (total_queries, total_clicks, queries_with_clicks, search_volume_buckets,
+  click_buckets — and for documents, the impression/click queries). Skipping it
+  on even one query makes the counts span different time ranges and the metrics
+  wrong. Confirm the timestamp field name from the sample document.
+  Include a "format" in the range filter (SearchIndexTool's docs ask for it on
+  date ranges). Add the filter inside a bool "filter" clause:
+    {"query": {"bool": {
+       "must": [ <the template's existing query clause(s), if any> ],
+       "filter": [ {"range": {"<timestamp_field>": {
+         "gte": "now-30d/d", "lte": "now/d",
+         "format": "strict_date_optional_time||epoch_millis"}}} ]
+     }},
+     "size": 0, "aggs": { <the template's aggs> }}
+  (For a template whose query is {"match_all": {}}, drop the "must" and keep only
+  the "filter".) If the request states NO time window, run the templates as-is
+  over all data.
 
   1. total_queries
      Index: ubi_queries
@@ -212,36 +314,76 @@ Computing UBI metrics — required OpenSearch aggregation queries:
      }
      Read:  aggregations.unique_queries.value
 
-  4. impression_buckets  (optional — enables per-query CTR breakdown)
+  4. search_volume_buckets  (optional — enables per-query CTR breakdown)
      Index: ubi_queries
      Query: {
        "size": 0,
        "aggs": {
          "by_query": {
-           "terms": {"field": "<user_query_field>.keyword", "size": 100}
+           "terms": {"field": "<user_query_field>", "size": 100}
          }
        }
      }
-     Pass:  aggregations.by_query.buckets  (the array) as a JSON string
+     (Use the field name directly when it is keyword-typed — confirm from the
+      mapping; add ".keyword" only for text fields that have a keyword sub-field.)
+     Pass:  aggregations.by_query.buckets  (the array) as search_volume_buckets
 
-  5. click_query_id_buckets  (optional — pairs with impression_buckets for per-query CTR)
+  5. click_buckets  (optional — pairs with search_volume_buckets for per-query CTR)
      Index: ubi_events
      Query: {
        "size": 0,
        "query": {"term": {"<action_field>": "<click_action>"}},
        "aggs": {
-         "by_query_id": {
-           "terms": {"field": "query_id", "size": 1000},
-           "aggs": {
-             "query_text": {
-               "top_hits": {"size": 1, "_source": ["<user_query_field>"]}
-             }
-           }
-         }
+         "by_query": {
+           "terms": {"field": "<user_query_field>", "size": 1000},
+           "aggs": {"searches_with_clicks": {"cardinality": {"field": "query_id"}}}
+         },
+         "missing_query_text": {"missing": {"field": "<user_query_field>"}}
        }
      }
-     Pass:  aggregations.by_query_id.buckets  (the array) as a JSON string
-     Also pass:  query_text_field="<user_query_field>", click_query_text_agg="query_text"
+     Each bucket carries doc_count (total clicks for that query) and
+     searches_with_clicks.value (distinct searches that got a click).
+     Pass:  aggregations.by_query.buckets  (the array) as click_buckets
+     Optionally pass:  clicks_without_query_text =
+       aggregations.missing_query_text.doc_count  (click events with no query text)
+
+Computing document CTR — use ComputeDocumentCTRTool:
+
+  Single document (impressions and clicks are separate event counts):
+    a) impressions
+       Index: ubi_events
+       Query: {"size": 0, "query": {"bool": {"must": [
+                 {"term": {"<object_id_field>": "<doc_id>"}},
+                 {"term": {"<action_field>": "<impression_action>"}}]}}}
+       Read:  hits.total.value  -> pass as impressions
+    b) clicks + average click position
+       Index: ubi_events
+       Query: {"size": 0, "query": {"bool": {"must": [
+                 {"term": {"<object_id_field>": "<doc_id>"}},
+                 {"term": {"<action_field>": "<click_action>"}}]}},
+               "aggs": {"avg_position": {"avg": {"field": "<position_field>"}}}}
+       Read:  hits.total.value -> clicks; aggregations.avg_position.value -> avg_click_position
+    Pass:  document_id="<doc_id>", impressions=..., clicks=..., avg_click_position=...
+
+  Multiple documents (ranked):
+    Index: ubi_events
+    Query: {
+      "size": 0,
+      "aggs": {
+        "by_doc": {
+          "terms": {"field": "<object_id_field>", "size": 100},
+          "aggs": {
+            "impressions": {"filter": {"term": {"<action_field>": "<impression_action>"}}},
+            "clicks": {
+              "filter": {"term": {"<action_field>": "<click_action>"}},
+              "aggs": {"avg_position": {"avg": {"field": "<position_field>"}}}
+            }
+          }
+        }
+      }
+    }
+    Pass:  document_buckets = aggregations.by_doc.buckets  (the array) as a JSON string
+    Optionally:  min_impressions=<n> to drop low-impression documents.
 
 Relevant indexes for your job are indexes holding UBI data. If not specified otherwise, these are ubi_events
 for client-side tracked events and ubi_queries for server-side tracked events.
@@ -249,6 +391,14 @@ Be concise, data-driven, specific with numbers, and focus on actual user behavio
 Always include concrete metrics (CTR percentages, click counts, search volumes) to support your insights.
 When reporting CTR values, always use the ctr_pct field from ComputeUBIMetricsTool (e.g. "25.00%"),
 not the raw ctr decimal.
+In any per-query ranking or listing, for EVERY query report ALL of the requested metrics
+explicitly and individually — do NOT omit any. When the request asks for per-query
+performance, report for each query: total query volume (search_volume), searches with
+clicks (searches_with_clicks), total clicks, average clicks per search (clicks_per_search),
+zero-click rate, and CTR — give the actual number for each, for each query. In particular,
+never drop searches_with_clicks or average clicks per search. Never replace a number with
+only a label like "lowest CTR" or "best performer"; always give the actual figure
+(e.g. "sweet trousers green: 17.75% CTR"), then optionally add the label.
 """
 
 
@@ -271,6 +421,8 @@ def set_mcp_client(mcp_client: MCPClient) -> None:
     global _mcp_client, _mcp_tools
     _mcp_client = mcp_client
     _mcp_tools = list(mcp_client.list_tools_sync())
+    # Let the self-contained overview tools retrieve via this same MCP client.
+    set_overview_mcp_client(mcp_client)
     log_info_event(
         logger,
         f"[Agents] MCPClient configured for specialized agents "
@@ -303,7 +455,7 @@ async def hypothesis_agent(query: str) -> str:
         agent = Agent(
             model=create_model(),
             system_prompt=HYPOTHESIS_GENERATOR_SYSTEM_PROMPT,
-            tools=[*_mcp_tools, aggregate_experiment_results],
+            tools=[*_mcp_tools, aggregate_experiment_results, compute_ubi_metrics],
         )
 
         # Invoke agent and return response
@@ -342,7 +494,13 @@ async def evaluation_agent(query: str) -> str:
         agent = Agent(
             model=create_model(),
             system_prompt=EVALUATION_AGENT_SYSTEM_PROMPT,
-            tools=[*_mcp_tools, aggregate_experiment_results],
+            tools=[
+                *_mcp_tools,
+                aggregate_experiment_results,
+                get_judgment_lists_overview,
+                get_query_sets_overview,
+                get_search_configurations_overview,
+            ],
         )
 
         # Invoke agent and return response
@@ -381,7 +539,7 @@ async def user_behavior_analysis_agent(query: str) -> str:
         agent = Agent(
             model=create_model(tier="small"),
             system_prompt=USER_BEHAVIOR_ANALYSIS_AGENT_SYSTEM_PROMPT,
-            tools=[*_mcp_tools, compute_ubi_metrics],
+            tools=[*_mcp_tools, compute_ubi_metrics, compute_document_ctr],
         )
 
         # Invoke agent and return response

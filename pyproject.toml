@@ -34,7 +34,6 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "opensearch-py",
     "mcp>=1.9.0",
     "strands-agents[ollama,otel]>=1.30.0",
     "openinference-instrumentation-bedrock",
@@ -64,6 +63,10 @@ dev = [
     "pytest-cov>=4.1.0",
     "pytest-timeout>=2.3.0",
     "mypy>=1.0.0",
+]
+evals = [
+    "numpy>=1.26.0",
+    "requests>=2.32.0",
 ]
 
 [project.scripts]

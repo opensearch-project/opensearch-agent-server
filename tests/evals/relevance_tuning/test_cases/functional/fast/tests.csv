@@ -1,0 +1,1069 @@
+prompt,__expected1,__expected2
+"Analyze the performance of the query 'laptop'. 
+        Specifically, for the given query, determine and return the following
+        properties: total query volume, searches with clicks and total number of clicks. 
+        Further return the average clicks per search, the zero click rate and ctr. 
+        The latter two give in percentages formatted with two decimals.
+        ","icontains-all: 10,4,9,40,0.90,60","llm-rubric: 
+        Below under the header '###SEQUENCE' a few expected results are listed in yaml format.
+        Each root element in the yaml listing refers to a single result.
+        The keys in the yaml format are a description of the meaning under which the
+        corresponding value shall appear in the response text. If the key is a combination of
+        words combined by some delimiter, try to derive the meaning from the sequence of
+        words it is made of. If the key and the context under which the value is mentioned
+        in the response do not match, fail the assertion.
+        Under a second header '###FACTS' there might be additional key - value pairs
+        to check for occurrence in the response text. Here again the key gives the context
+        under which mentioning of the value is expected.
+        If no key-value pairs occur in this section, then nothing is to be asserted here.
+        Compare floating point values only up to the second decimal.
+        Fail the test if the information provided below within both headers can not be checked
+        against the response because some parts are missing. Statements such as some field
+        or the response being too big and thus not being able to retrieve those also
+        counts as fail. 
+
+        ###SEQUENCE
+        CTR in percentage, rounded to two decimals: 40.0
+average number of clicks per search for the given query: 0.9
+number of searches with clicks: 4
+percentage of searches for the given query for which no click occurred: 60.0
+the user query: laptop
+total number of clicks: 9
+total number of searches: 10
+
+
+        ###FACTS
+        {}
+
+        "
+"Analyze the performance of the query 'wireless earbuds'. 
+        Specifically, for the given query, determine and return the following
+        properties: total query volume, searches with clicks and total number of clicks. 
+        Further return the average clicks per search, the zero click rate and ctr. 
+        The latter two give in percentages formatted with two decimals.
+        ","icontains-all: 36,8,54,22.22,1.50,77.78","llm-rubric: 
+        Below under the header '###SEQUENCE' a few expected results are listed in yaml format.
+        Each root element in the yaml listing refers to a single result.
+        The keys in the yaml format are a description of the meaning under which the
+        corresponding value shall appear in the response text. If the key is a combination of
+        words combined by some delimiter, try to derive the meaning from the sequence of
+        words it is made of. If the key and the context under which the value is mentioned
+        in the response do not match, fail the assertion.
+        Under a second header '###FACTS' there might be additional key - value pairs
+        to check for occurrence in the response text. Here again the key gives the context
+        under which mentioning of the value is expected.
+        If no key-value pairs occur in this section, then nothing is to be asserted here.
+        Compare floating point values only up to the second decimal.
+        Fail the test if the information provided below within both headers can not be checked
+        against the response because some parts are missing. Statements such as some field
+        or the response being too big and thus not being able to retrieve those also
+        counts as fail. 
+
+        ###SEQUENCE
+        CTR in percentage, rounded to two decimals: 22.22
+average number of clicks per search for the given query: 1.5
+number of searches with clicks: 8
+percentage of searches for the given query for which no click occurred: 77.78
+the user query: wireless earbuds
+total number of clicks: 54
+total number of searches: 36
+
+
+        ###FACTS
+        {}
+
+        "
+"Analyze the performance of the query 'gold'. 
+        Specifically, for the given query, determine and return the following
+        properties: total query volume, searches with clicks and total number of clicks. 
+        Further return the average clicks per search, the zero click rate and ctr. 
+        The latter two give in percentages formatted with two decimals.
+        ","icontains-all: 42,10,38,23.81,0.90,76.19","llm-rubric: 
+        Below under the header '###SEQUENCE' a few expected results are listed in yaml format.
+        Each root element in the yaml listing refers to a single result.
+        The keys in the yaml format are a description of the meaning under which the
+        corresponding value shall appear in the response text. If the key is a combination of
+        words combined by some delimiter, try to derive the meaning from the sequence of
+        words it is made of. If the key and the context under which the value is mentioned
+        in the response do not match, fail the assertion.
+        Under a second header '###FACTS' there might be additional key - value pairs
+        to check for occurrence in the response text. Here again the key gives the context
+        under which mentioning of the value is expected.
+        If no key-value pairs occur in this section, then nothing is to be asserted here.
+        Compare floating point values only up to the second decimal.
+        Fail the test if the information provided below within both headers can not be checked
+        against the response because some parts are missing. Statements such as some field
+        or the response being too big and thus not being able to retrieve those also
+        counts as fail. 
+
+        ###SEQUENCE
+        CTR in percentage, rounded to two decimals: 23.81
+average number of clicks per search for the given query: 0.9
+number of searches with clicks: 10
+percentage of searches for the given query for which no click occurred: 76.19
+the user query: gold
+total number of clicks: 38
+total number of searches: 42
+
+
+        ###FACTS
+        {}
+
+        "
+"Analyze the performance of the product with document_id 'B07ZCRSVBB'
+            in the index 'ubi_events'.
+            For the given document, provide the total number of impressions, the
+            total number of clicks, ctr in percentage (rounded and formatted to 2 decimals)
+            and the average click position.","icontains-all: 11,8,72.73,4.63","llm-rubric: 
+        Below under the header '###SEQUENCE' a few expected results are listed in yaml format.
+        Each root element in the yaml listing refers to a single result.
+        The keys in the yaml format are a description of the meaning under which the
+        corresponding value shall appear in the response text. If the key is a combination of
+        words combined by some delimiter, try to derive the meaning from the sequence of
+        words it is made of. If the key and the context under which the value is mentioned
+        in the response do not match, fail the assertion.
+        Under a second header '###FACTS' there might be additional key - value pairs
+        to check for occurrence in the response text. Here again the key gives the context
+        under which mentioning of the value is expected.
+        If no key-value pairs occur in this section, then nothing is to be asserted here.
+        Compare floating point values only up to the second decimal.
+        Fail the test if the information provided below within both headers can not be checked
+        against the response because some parts are missing. Statements such as some field
+        or the response being too big and thus not being able to retrieve those also
+        counts as fail. 
+
+        ###SEQUENCE
+        CTR in percentage, rounded to two decimals: 72.73
+average position in the search result for clicks on the document: 4.63
+id of the document: B07ZCRSVBB
+number of times the document was clicked: 8
+number of times users saw the document: 11
+
+
+        ###FACTS
+        {}
+
+        "
+"Analyze the top 20 queries performance by engagement.
+                Take the search/query volume from the query index 'ubi_queries'
+                and the click (event) counts from the event index 'ubi_events'.
+                Only consider queries with at least
+                5 searches, and over a time range of 30
+                days. Determine the following properties per query:
+                total query volume, searches with clicks and total number of clicks,
+                average clicks per search, the zero click rate and ctr.
+                The latter two give in percentages formatted with two decimals.
+                Also state how many queries matched the above filter criteria.
+                Do not use grouping delimiter for amounts over one thousand, only use decimal
+                delimiter where applicable.
+                ","icontains-all: gold,36,8,26,22.22,0.72,77.78,wireless earbuds,18,3,20,16.67,1.11,83.33,wireless,6,0,0,0,0,100,3","llm-rubric: 
+        Below under the header '###SEQUENCE' a few expected results are listed in yaml format.
+        Each root element in the yaml listing refers to a single result.
+        The keys in the yaml format are a description of the meaning under which the
+        corresponding value shall appear in the response text. If the key is a combination of
+        words combined by some delimiter, try to derive the meaning from the sequence of
+        words it is made of. If the key and the context under which the value is mentioned
+        in the response do not match, fail the assertion.
+        Under a second header '###FACTS' there might be additional key - value pairs
+        to check for occurrence in the response text. Here again the key gives the context
+        under which mentioning of the value is expected.
+        If no key-value pairs occur in this section, then nothing is to be asserted here.
+        Compare floating point values only up to the second decimal.
+        Fail the test if the information provided below within both headers can not be checked
+        against the response because some parts are missing. Statements such as some field
+        or the response being too big and thus not being able to retrieve those also
+        counts as fail. 
+
+        ###SEQUENCE
+        CTR in percentage, rounded to two decimals: 22.22
+average number of clicks per search for the given query: 0.72
+number of searches with clicks: 8
+percentage of searches for the given query for which no click occurred: 77.78
+the user query: gold
+total number of clicks: 26
+total number of searches: 36
+---
+CTR in percentage, rounded to two decimals: 16.67
+average number of clicks per search for the given query: 1.11
+number of searches with clicks: 3
+percentage of searches for the given query for which no click occurred: 83.33
+the user query: wireless earbuds
+total number of clicks: 20
+total number of searches: 18
+---
+CTR in percentage, rounded to two decimals: 0.0
+average number of clicks per search for the given query: 0.0
+number of searches with clicks: 0
+percentage of searches for the given query for which no click occurred: 100.0
+the user query: wireless
+total number of clicks: 0
+total number of searches: 6
+
+
+        ###FACTS
+        Total number of queries contained in the result: 3
+
+        "
+"
+                Give me an overview of the last 5 most recent experiments.
+                Order the experiment from newest to oldest.
+                Include for each experiment the type, status, the query set id, 
+                the list of search configuration ids, the list of judgement list ids.
+                Do not just give the count of ids in search configuration list or
+                the judgement list list, make sure to include the ids.
+                ","llm-rubric: 
+        Below under the header '###SEQUENCE' a few expected results are listed in yaml format.
+        Each root element in the yaml listing refers to a single result.
+        The keys in the yaml format are a description of the meaning under which the
+        corresponding value shall appear in the response text. If the key is a combination of
+        words combined by some delimiter, try to derive the meaning from the sequence of
+        words it is made of. If the key and the context under which the value is mentioned
+        in the response do not match, fail the assertion.
+        Under a second header '###FACTS' there might be additional key - value pairs
+        to check for occurrence in the response text. Here again the key gives the context
+        under which mentioning of the value is expected.
+        If no key-value pairs occur in this section, then nothing is to be asserted here.
+        Compare floating point values only up to the second decimal.
+        Fail the test if the information provided below within both headers can not be checked
+        against the response because some parts are missing. Statements such as some field
+        or the response being too big and thus not being able to retrieve those also
+        counts as fail. 
+
+        ###SEQUENCE
+        judgmentList:
+- c87f1772-3e6c-4d91-8a1f-e7dc38753fe9
+querySetId: 9a41153c-1cec-438b-88da-d780c199b3cd
+searchConfigurationList:
+- ed0be1a2-39df-4154-806b-84608331d1d4
+status: COMPLETED
+type: POINTWISE_EVALUATION
+---
+judgmentList:
+- c8f33bd4-2bc3-4735-99b0-f9d7fcd705fb
+querySetId: 21af87ce-a8df-4cff-a5f3-aa4ea31d3f8e
+searchConfigurationList:
+- 039dba75-7d8e-46aa-a8b4-b8c7dc5e940d
+status: COMPLETED
+type: HYBRID_OPTIMIZER
+---
+judgmentList: []
+querySetId: 9a41153c-1cec-438b-88da-d780c199b3cd
+searchConfigurationList:
+- ed0be1a2-39df-4154-806b-84608331d1d4
+- 03e07b1a-3680-4627-b120-5e11d870371d
+status: COMPLETED
+type: PAIRWISE_COMPARISON
+---
+judgmentList: []
+querySetId: 60f5fa32-33ef-452b-809b-41ba437bf318
+searchConfigurationList:
+- 14b84cfe-c402-4153-9968-34b8e90093f1
+- 8103d14e-d1f9-4985-8742-947318876e27
+status: COMPLETED
+type: PAIRWISE_COMPARISON
+---
+judgmentList: []
+querySetId: b6cbab1b-bbee-4137-bf28-88c4ea63b1a5
+searchConfigurationList:
+- 103de2f4-3c13-4807-8185-c0165048436e
+- 6462b003-add7-4fcc-a16a-793438927522
+status: COMPLETED
+type: PAIRWISE_COMPARISON
+
+
+        ###FACTS
+        {}
+
+        ",
+"
+                Give me an overview of the last 4 most recently created judgement lists.
+                Include the following attributes per experiment: the id, timestamp, name,
+                status, type and judgement ratings. For the judgement ratings, give only examples
+                for the first 5 queries and per query the first 5 example judgements.
+                For those example judgements, explicitly give the document id and the score.
+                ","llm-rubric: 
+        Below under the header '###SEQUENCE' a few expected results are listed in yaml format.
+        Each root element in the yaml listing refers to a single result.
+        The keys in the yaml format are a description of the meaning under which the
+        corresponding value shall appear in the response text. If the key is a combination of
+        words combined by some delimiter, try to derive the meaning from the sequence of
+        words it is made of. If the key and the context under which the value is mentioned
+        in the response do not match, fail the assertion.
+        Under a second header '###FACTS' there might be additional key - value pairs
+        to check for occurrence in the response text. Here again the key gives the context
+        under which mentioning of the value is expected.
+        If no key-value pairs occur in this section, then nothing is to be asserted here.
+        Compare floating point values only up to the second decimal.
+        Fail the test if the information provided below within both headers can not be checked
+        against the response because some parts are missing. Statements such as some field
+        or the response being too big and thus not being able to retrieve those also
+        counts as fail. 
+
+        ###SEQUENCE
+        id: d7c531a9-7d70-4851-b89c-c01076f8c82d
+judgmentRatings:
+- query: 3 year old boy birthday gift
+  ratings:
+  - docId: B01BMSFF4Y
+    rating: '1.000'
+  - docId: B07P713L5V
+    rating: '2.000'
+  - docId: B07WYPZCQ5
+    rating: '0.000'
+  - docId: B08QJ2L34M
+    rating: '3.000'
+  - docId: B089XZ3X7T
+    rating: '2.000'
+- query: hat
+  ratings:
+  - docId: B078TDQC3G
+    rating: '2.000'
+  - docId: B073TWLRW9
+    rating: '3.000'
+  - docId: B07F1P55G5
+    rating: '3.000'
+  - docId: B07V6P34M7
+    rating: '3.000'
+  - docId: B07CSX25JB
+    rating: '3.000'
+- query: laptop accessories
+  ratings:
+  - docId: B08C316XVF
+    rating: '3.000'
+  - docId: B088HJPN6D
+    rating: '3.000'
+  - docId: B075Y6Y9H5
+    rating: '3.000'
+  - docId: B07QQB7552
+    rating: '0.000'
+  - docId: B081721LTM
+    rating: '0.000'
+- query: picture frame
+  ratings:
+  - docId: B01I5SLS9A
+    rating: '0.000'
+  - docId: B00BT0MW4W
+    rating: '1.000'
+  - docId: B08T5QXC6W
+    rating: '1.000'
+  - docId: B07R46ZXMM
+    rating: '1.000'
+  - docId: B07N38BPBK
+    rating: '0.000'
+- query: tv
+  ratings:
+  - docId: B07K1H1G3M
+    rating: '0.000'
+  - docId: B07THVCJK3
+    rating: '2.000'
+  - docId: B07FPP6TB5
+    rating: '3.000'
+  - docId: B07Q7Z9DJ3
+    rating: '1.000'
+  - docId: B07PYPCX21
+    rating: '1.000'
+name: LLM Judgments for Product Search Query Set
+status: COMPLETED
+timestamp: '2026-07-01T13:10:55.428Z'
+type: IMPORT_JUDGMENT
+---
+id: c87f1772-3e6c-4d91-8a1f-e7dc38753fe9
+judgmentRatings:
+- query: t towels kitchen
+  ratings:
+  - docId: B07NCQWCQS
+    rating: '100.000'
+  - docId: B07NPC54DK
+    rating: '100.000'
+  - docId: B07NS654PC
+    rating: '100.000'
+  - docId: B07QLRTGVQ
+    rating: '10.000'
+  - docId: B07RGB1ZQ2
+    rating: '100.000'
+- query: table top bandsaw for metal
+  ratings:
+  - docId: B01M3YCXD2
+    rating: '100.000'
+  - docId: B07CLM7HC6
+    rating: '100.000'
+  - docId: B06XP1NJYG
+    rating: '10.000'
+  - docId: B077QMBTLP
+    rating: '100.000'
+  - docId: B077YSX831
+    rating: '0.000'
+- query: tan strappy heels for women
+  ratings:
+  - docId: B07LFV45Z7
+    rating: '100.000'
+  - docId: B07L8YX5DD
+    rating: '0.000'
+  - docId: B07HGTXDQQ
+    rating: '100.000'
+  - docId: B078NTLQN6
+    rating: '100.000'
+  - docId: B07D9DMKL7
+    rating: '0.000'
+- query: tank top plus size women
+  ratings:
+  - docId: B07R2MPQJG
+    rating: '100.000'
+  - docId: B07MMYW2T2
+    rating: '100.000'
+  - docId: B07KZPG24J
+    rating: '100.000'
+  - docId: B07CSCYVYB
+    rating: '10.000'
+  - docId: B07CZPPCGW
+    rating: '100.000'
+- query: tape and mudding tools
+  ratings:
+  - docId: B07KRNT72J
+    rating: '1.000'
+  - docId: B079C66BV3
+    rating: '100.000'
+  - docId: B07BSS89GL
+    rating: '1.000'
+  - docId: B07CNWSBXY
+    rating: '1.000'
+  - docId: B07D72G78Q
+    rating: '0.000'
+name: ESCI Judgments
+status: COMPLETED
+timestamp: '2026-07-01T13:10:54.745Z'
+type: IMPORT_JUDGMENT
+---
+id: c8f33bd4-2bc3-4735-99b0-f9d7fcd705fb
+judgmentRatings:
+- query: red dress
+  ratings:
+  - docId: B077ZJXCTS
+    rating: '0.000'
+  - docId: B071S6LTJJ
+    rating: '0.000'
+  - docId: B01IDSPDJI
+    rating: '0.000'
+  - docId: B07QRCGL3G
+    rating: '0.000'
+  - docId: B074V6Q1DR
+    rating: '0.000'
+- query: blue jeans
+  ratings:
+  - docId: B07L9V4Y98
+    rating: '0.000'
+  - docId: B01N0DSRJC
+    rating: '0.000'
+  - docId: B001CRAWCQ
+    rating: '0.000'
+  - docId: B075DGJZRM
+    rating: '0.000'
+  - docId: B009ZD297U
+    rating: '0.000'
+name: Imported Judgments
+status: COMPLETED
+timestamp: '2026-07-01T13:10:54.648Z'
+type: IMPORT_JUDGMENT
+---
+id: ec628dc4-2a90-4edb-aa54-c27551b6c6a7
+judgmentRatings:
+- query: yeezy
+  ratings:
+  - docId: B077ZJXCTS
+    rating: '0.000'
+  - docId: B071S6LTJJ
+    rating: '0.000'
+  - docId: B01IDSPDJI
+    rating: '0.000'
+  - docId: B074V6Q1DR
+    rating: '0.000'
+  - docId: B07QRCGL3G
+    rating: '0.000'
+- query: k cups
+  ratings:
+  - docId: B07L9V4Y98
+    rating: '0.000'
+  - docId: B01N0DSRJC
+    rating: '0.000'
+  - docId: B001CRAWCQ
+    rating: '0.000'
+  - docId: B075DGJZRM
+    rating: '0.000'
+  - docId: B009ZD297U
+    rating: '0.000'
+- query: dresses for women casual summer
+  ratings:
+  - docId: B07NW21D1W
+    rating: '0.000'
+  - docId: B07NW4DYTH
+    rating: '0.000'
+  - docId: B07PKKMSDC
+    rating: '0.000'
+  - docId: B073DJ9Q43
+    rating: '0.000'
+  - docId: B08X3NJ2JZ
+    rating: '0.000'
+- query: ring
+  ratings:
+  - docId: B07JHRPQ8S
+    rating: '0.000'
+  - docId: B07Q9VBYV8
+    rating: '0.000'
+  - docId: B07GTG17W1
+    rating: '0.000'
+  - docId: B07KSVCB1P
+    rating: '0.000'
+  - docId: B07WML2XTD
+    rating: '0.000'
+- query: hp
+  ratings:
+  - docId: B07PKPPBYX
+    rating: '0.000'
+  - docId: B07SKFQJKT
+    rating: '0.000'
+  - docId: B07MHVL3GR
+    rating: '0.000'
+  - docId: B00WR23WE0
+    rating: '0.000'
+  - docId: B006E38J32
+    rating: '0.000'
+name: Implicit Judgements
+status: COMPLETED
+timestamp: '2026-07-01T13:10:52.938Z'
+type: UBI_JUDGMENT
+
+
+        ###FACTS
+        {}
+
+        ",
+"
+               Give me an overview of the available search configurations.
+               If less than ten configurations are available, list all, otherwise
+               list the first 10 you find.
+               Include the following attributes per query set: the id (the actual search configuration id), name, index, query and search pipeline (if any).
+               As per the query, do give me the full query dsl and a description of what the query does.
+               ","llm-rubric: 
+        Below under the header '###SEQUENCE' a few expected results are listed in yaml format.
+        Each root element in the yaml listing refers to a single result.
+        The keys in the yaml format are a description of the meaning under which the
+        corresponding value shall appear in the response text. If the key is a combination of
+        words combined by some delimiter, try to derive the meaning from the sequence of
+        words it is made of. If the key and the context under which the value is mentioned
+        in the response do not match, fail the assertion.
+        Under a second header '###FACTS' there might be additional key - value pairs
+        to check for occurrence in the response text. Here again the key gives the context
+        under which mentioning of the value is expected.
+        If no key-value pairs occur in this section, then nothing is to be asserted here.
+        Compare floating point values only up to the second decimal.
+        Fail the test if the information provided below within both headers can not be checked
+        against the response because some parts are missing. Statements such as some field
+        or the response being too big and thus not being able to retrieve those also
+        counts as fail. 
+
+        ###SEQUENCE
+        id: ed0be1a2-39df-4154-806b-84608331d1d4
+index: ecommerce
+name: baseline
+query: '{'query':{'multi_match':{'query':'%SearchText%','fields':['id','title','category','bullet_points','description','brand','color']}}}'
+searchPipeline: ''
+---
+id: 03e07b1a-3680-4627-b120-5e11d870371d
+index: ecommerce
+name: baseline with title weight
+query: '{'query':{'multi_match':{'query':'%SearchText%','fields':['id','title^25','category','bullet_points','description','brand','color']}}}'
+searchPipeline: ''
+---
+id: 039dba75-7d8e-46aa-a8b4-b8c7dc5e940d
+index: ecommerce
+name: hybrid_search_query
+query: '{'query':{'hybrid':{'queries':[{'multi_match':{'query':'%SearchText%','fields':['id','title','category','bullet_points','description','brand','color']}},{'neural':{'title_embedding':{'query_text':'%SearchText%','k':100,'model_id':'null'}}}]}},'size':10,'_source':['id','title','category','brand','image']}'
+searchPipeline: hybrid-search-pipeline
+---
+id: 8aafbd3d-bd01-4f80-9ec5-bf56b6b360d3
+index: ecommerce
+name: art_controlled
+query: '{'query':{'multi_match':{'query':'%SearchText%','fields':['id','title^2','category','bullets','description','Brand','Color']}}}'
+searchPipeline: ''
+
+
+        ###FACTS
+        {}
+
+        ",
+"
+               Give me an overview of the query set with id 'd4e59d85-162c-4eb7-a60b-a0a3d9a64f35'.
+               Include the following attributes per query set: the id, name,
+               description, timestamp and the actual query set. If the query set
+               contains <= 10 elements, list the queries fully, otherwise
+               list 10 example queries.
+               ","llm-rubric: 
+        Below under the header '###SEQUENCE' a few expected results are listed in yaml format.
+        Each root element in the yaml listing refers to a single result.
+        The keys in the yaml format are a description of the meaning under which the
+        corresponding value shall appear in the response text. If the key is a combination of
+        words combined by some delimiter, try to derive the meaning from the sequence of
+        words it is made of. If the key and the context under which the value is mentioned
+        in the response do not match, fail the assertion.
+        Under a second header '###FACTS' there might be additional key - value pairs
+        to check for occurrence in the response text. Here again the key gives the context
+        under which mentioning of the value is expected.
+        If no key-value pairs occur in this section, then nothing is to be asserted here.
+        Compare floating point values only up to the second decimal.
+        Fail the test if the information provided below within both headers can not be checked
+        against the response because some parts are missing. Statements such as some field
+        or the response being too big and thus not being able to retrieve those also
+        counts as fail. When comparing the expected query set with the result, small query sets with <= 10 elements should be listed fully in the response and reflect the expectation, while for longer lists a subsample of 10 queries is sufficient. Make sure all of those queries also appear in the listed expectation.
+
+        ###SEQUENCE
+        id: d4e59d85-162c-4eb7-a60b-a0a3d9a64f35
+name: Representative Queries
+querySetQueries:
+- queryText: laptop stand
+- queryText: wireless earbuds
+- queryText: hoodie
+- queryText: wine glass
+- queryText: rc cars
+- queryText: toys for boys
+- queryText: lego friends
+- queryText: othoking bamboo charging station
+- queryText: phone charger
+- queryText: alarm clock
+- queryText: karaoke microphone
+timestamp: '2026-07-01T13:10:55.321Z'
+
+
+        ###FACTS
+        {}
+
+        ",
+"Analyze the top 20 queries performance by engagement.
+                Take the search/query volume from the query index 'test_query_index'
+                and the click (event) counts from the event index 'test_event_index'.
+                Only consider queries with at least
+                5 searches, and over a time range of 30
+                days. Determine the following properties per query:
+                total query volume, searches with clicks and total number of clicks,
+                average clicks per search, the zero click rate and ctr.
+                The latter two give in percentages formatted with two decimals.
+                Also state how many queries matched the above filter criteria.
+                Do not use grouping delimiter for amounts over one thousand, only use decimal
+                delimiter where applicable.
+                ","icontains-all: shoe super,300,106,220,35.33,0.73,64.67,nintendo switch,200,57,600,28.50,3,71.50,sweet trousers green,400,71,540,17.75,1.35,82.25,ninhendo swithc,200,0,0,0,0,100,4","llm-rubric: 
+        Below under the header '###SEQUENCE' a few expected results are listed in yaml format.
+        Each root element in the yaml listing refers to a single result.
+        The keys in the yaml format are a description of the meaning under which the
+        corresponding value shall appear in the response text. If the key is a combination of
+        words combined by some delimiter, try to derive the meaning from the sequence of
+        words it is made of. If the key and the context under which the value is mentioned
+        in the response do not match, fail the assertion.
+        Under a second header '###FACTS' there might be additional key - value pairs
+        to check for occurrence in the response text. Here again the key gives the context
+        under which mentioning of the value is expected.
+        If no key-value pairs occur in this section, then nothing is to be asserted here.
+        Compare floating point values only up to the second decimal.
+        Fail the test if the information provided below within both headers can not be checked
+        against the response because some parts are missing. Statements such as some field
+        or the response being too big and thus not being able to retrieve those also
+        counts as fail. 
+
+        ###SEQUENCE
+        CTR in percentage, rounded to two decimals: 35.33
+average number of clicks per search for the given query: 0.73
+number of searches with clicks: 106
+percentage of searches for the given query for which no click occurred: 64.67
+the user query: shoe super
+total number of clicks: 220
+total number of searches: 300
+---
+CTR in percentage, rounded to two decimals: 28.5
+average number of clicks per search for the given query: 3.0
+number of searches with clicks: 57
+percentage of searches for the given query for which no click occurred: 71.5
+the user query: nintendo switch
+total number of clicks: 600
+total number of searches: 200
+---
+CTR in percentage, rounded to two decimals: 17.75
+average number of clicks per search for the given query: 1.35
+number of searches with clicks: 71
+percentage of searches for the given query for which no click occurred: 82.25
+the user query: sweet trousers green
+total number of clicks: 540
+total number of searches: 400
+---
+CTR in percentage, rounded to two decimals: 0.0
+average number of clicks per search for the given query: 0.0
+number of searches with clicks: 0
+percentage of searches for the given query for which no click occurred: 100.0
+the user query: ninhendo swithc
+total number of clicks: 0
+total number of searches: 200
+
+
+        ###FACTS
+        Total number of queries contained in the result: 4
+
+        "
+"Analyze the performance of the product with document_id 'shoe_low1'
+            in the index 'test_event_index'.
+            For the given document, provide the total number of impressions, the
+            total number of clicks, ctr in percentage (rounded and formatted to 2 decimals)
+            and the average click position.","icontains-all: 20,2,10","llm-rubric: 
+        Below under the header '###SEQUENCE' a few expected results are listed in yaml format.
+        Each root element in the yaml listing refers to a single result.
+        The keys in the yaml format are a description of the meaning under which the
+        corresponding value shall appear in the response text. If the key is a combination of
+        words combined by some delimiter, try to derive the meaning from the sequence of
+        words it is made of. If the key and the context under which the value is mentioned
+        in the response do not match, fail the assertion.
+        Under a second header '###FACTS' there might be additional key - value pairs
+        to check for occurrence in the response text. Here again the key gives the context
+        under which mentioning of the value is expected.
+        If no key-value pairs occur in this section, then nothing is to be asserted here.
+        Compare floating point values only up to the second decimal.
+        Fail the test if the information provided below within both headers can not be checked
+        against the response because some parts are missing. Statements such as some field
+        or the response being too big and thus not being able to retrieve those also
+        counts as fail. 
+
+        ###SEQUENCE
+        CTR in percentage, rounded to two decimals: 10.0
+average position in the search result for clicks on the document: null
+id of the document: shoe_low1
+number of times the document was clicked: 2
+number of times users saw the document: 20
+
+
+        ###FACTS
+        {}
+
+        "
+"Analyze the performance of the product with document_id 'shoe_high1'
+            in the index 'test_event_index'.
+            For the given document, provide the total number of impressions, the
+            total number of clicks, ctr in percentage (rounded and formatted to 2 decimals)
+            and the average click position.","icontains-all: 20,20,100","llm-rubric: 
+        Below under the header '###SEQUENCE' a few expected results are listed in yaml format.
+        Each root element in the yaml listing refers to a single result.
+        The keys in the yaml format are a description of the meaning under which the
+        corresponding value shall appear in the response text. If the key is a combination of
+        words combined by some delimiter, try to derive the meaning from the sequence of
+        words it is made of. If the key and the context under which the value is mentioned
+        in the response do not match, fail the assertion.
+        Under a second header '###FACTS' there might be additional key - value pairs
+        to check for occurrence in the response text. Here again the key gives the context
+        under which mentioning of the value is expected.
+        If no key-value pairs occur in this section, then nothing is to be asserted here.
+        Compare floating point values only up to the second decimal.
+        Fail the test if the information provided below within both headers can not be checked
+        against the response because some parts are missing. Statements such as some field
+        or the response being too big and thus not being able to retrieve those also
+        counts as fail. 
+
+        ###SEQUENCE
+        CTR in percentage, rounded to two decimals: 100.0
+average position in the search result for clicks on the document: null
+id of the document: shoe_high1
+number of times the document was clicked: 20
+number of times users saw the document: 20
+
+
+        ###FACTS
+        {}
+
+        "
+"Analyze the performance of the product with document_id 'trousers_green_low1'
+            in the index 'test_event_index'.
+            For the given document, provide the total number of impressions, the
+            total number of clicks, ctr in percentage (rounded and formatted to 2 decimals)
+            and the average click position.","icontains-all: 50,1,2","llm-rubric: 
+        Below under the header '###SEQUENCE' a few expected results are listed in yaml format.
+        Each root element in the yaml listing refers to a single result.
+        The keys in the yaml format are a description of the meaning under which the
+        corresponding value shall appear in the response text. If the key is a combination of
+        words combined by some delimiter, try to derive the meaning from the sequence of
+        words it is made of. If the key and the context under which the value is mentioned
+        in the response do not match, fail the assertion.
+        Under a second header '###FACTS' there might be additional key - value pairs
+        to check for occurrence in the response text. Here again the key gives the context
+        under which mentioning of the value is expected.
+        If no key-value pairs occur in this section, then nothing is to be asserted here.
+        Compare floating point values only up to the second decimal.
+        Fail the test if the information provided below within both headers can not be checked
+        against the response because some parts are missing. Statements such as some field
+        or the response being too big and thus not being able to retrieve those also
+        counts as fail. 
+
+        ###SEQUENCE
+        CTR in percentage, rounded to two decimals: 2.0
+average position in the search result for clicks on the document: null
+id of the document: trousers_green_low1
+number of times the document was clicked: 1
+number of times users saw the document: 50
+
+
+        ###FACTS
+        {}
+
+        "
+"Analyze the performance of the product with document_id 'trousers_green_high1'
+            in the index 'test_event_index'.
+            For the given document, provide the total number of impressions, the
+            total number of clicks, ctr in percentage (rounded and formatted to 2 decimals)
+            and the average click position.","icontains-all: 50,50,100","llm-rubric: 
+        Below under the header '###SEQUENCE' a few expected results are listed in yaml format.
+        Each root element in the yaml listing refers to a single result.
+        The keys in the yaml format are a description of the meaning under which the
+        corresponding value shall appear in the response text. If the key is a combination of
+        words combined by some delimiter, try to derive the meaning from the sequence of
+        words it is made of. If the key and the context under which the value is mentioned
+        in the response do not match, fail the assertion.
+        Under a second header '###FACTS' there might be additional key - value pairs
+        to check for occurrence in the response text. Here again the key gives the context
+        under which mentioning of the value is expected.
+        If no key-value pairs occur in this section, then nothing is to be asserted here.
+        Compare floating point values only up to the second decimal.
+        Fail the test if the information provided below within both headers can not be checked
+        against the response because some parts are missing. Statements such as some field
+        or the response being too big and thus not being able to retrieve those also
+        counts as fail. 
+
+        ###SEQUENCE
+        CTR in percentage, rounded to two decimals: 100.0
+average position in the search result for clicks on the document: null
+id of the document: trousers_green_high1
+number of times the document was clicked: 50
+number of times users saw the document: 50
+
+
+        ###FACTS
+        {}
+
+        "
+"
+            How many events are there in the ubi_events index? 
+            Go ahead with the analysis and directly come back to me with an answer.
+            ","icontains-all: 3,448",
+"
+        What are the worst performing queries of the past 30 days? 
+        Go ahead with the analysis and directly come back to me with an answer.
+        ","icontains-any: spiderwire stealth,wireless earbuds,gold,wireless,wirel,wirele,wirelese,wirels",
+"Find the 10 worst performing queries.","llm-rubric: 
+        The user asked for the worst performing queries. Using the same
+        user-behaviour data the agent has access to, the worst performers for the
+        CURRENT index fall into two groups.
+
+        Group A - zero click-through (nobody clicks these), worst first by volume:
+        - wireless (12 searches, 0 clicks)
+- samsung (6 searches, 0 clicks)
+- gaming chair (4 searches, 0 clicks)
+- futon frames full size without mattress (4 searches, 0 clicks)
+- ereader 16gb (3 searches, 0 clicks)
+- wireles (3 searches, 0 clicks)
+- wi (3 searches, 0 clicks)
+- wirelese (3 searches, 0 clicks)
+
+        Group B - highest-VOLUME queries with a sub-optimal (nonzero) CTR, i.e. the
+        biggest improvement opportunities / potential high impact:
+        - gold (42 searches, CTR 23.81%)
+- wireless earbuds (36 searches, CTR 22.22%)
+- laptop (10 searches, CTR 40.00%)
+
+        Pass the assertion only if ALL of the following hold:
+        1) The response identifies poorly / worst performing queries and names AT
+           LEAST 3 of the Group A queries above (match on the query
+           text; treat obvious typos or minor variants as matches).
+        2) The response ALSO calls out AT LEAST ONE of the Group B high-volume
+           queries above as a high-volume / high-impact query with room to improve
+           its CTR.
+        3) The response suggests next steps that include at least one of: generating
+           hypotheses, or analyzing the search results for the problematic queries.
+
+        Ignore ordering, grouping labels, exact CTR/volume numbers, and any extra
+        queries the response mentions beyond these lists.
+        ","icontains-any: wireless,samsung,gaming chair,futon frames full size without mattress,ereader 16gb,wireles,wi,wirelese,gold,wireless earbuds,laptop"
+"
+        Help me improve the query samsung under the current search setup.
+        ","llm-rubric: 
+                Response contains an ask for the search configuration or plausible suggestions
+                based on observations from tracking data and / or reference ot the hypothesis agent.
+                ",
+"
+               Give me an overview of the most recently created judgement list.
+               Include the following attributes per experiment: the id, timestamp, name,
+               status, type and judgement ratings. For the judgement ratings, give only examples
+               for the first 5 queries and per query the first 5 example judgements.
+               For those example judgements, explicitly give the document id and the score.
+               ","llm-rubric: 
+        Below under the header '###SEQUENCE' a few expected results are listed in yaml format.
+        Each root element in the yaml listing refers to a single result.
+        The keys in the yaml format are a description of the meaning under which the
+        corresponding value shall appear in the response text. If the key is a combination of
+        words combined by some delimiter, try to derive the meaning from the sequence of
+        words it is made of. If the key and the context under which the value is mentioned
+        in the response do not match, fail the assertion.
+        Under a second header '###FACTS' there might be additional key - value pairs
+        to check for occurrence in the response text. Here again the key gives the context
+        under which mentioning of the value is expected.
+        If no key-value pairs occur in this section, then nothing is to be asserted here.
+        Compare floating point values only up to the second decimal.
+        Fail the test if the information provided below within both headers can not be checked
+        against the response because some parts are missing. Statements such as some field
+        or the response being too big and thus not being able to retrieve those also
+        counts as fail. 
+
+        ###SEQUENCE
+        id: d7c531a9-7d70-4851-b89c-c01076f8c82d
+judgmentRatings:
+- query: 3 year old boy birthday gift
+  ratings:
+  - docId: B01BMSFF4Y
+    rating: '1.000'
+  - docId: B07P713L5V
+    rating: '2.000'
+  - docId: B07WYPZCQ5
+    rating: '0.000'
+  - docId: B08QJ2L34M
+    rating: '3.000'
+  - docId: B089XZ3X7T
+    rating: '2.000'
+- query: hat
+  ratings:
+  - docId: B078TDQC3G
+    rating: '2.000'
+  - docId: B073TWLRW9
+    rating: '3.000'
+  - docId: B07F1P55G5
+    rating: '3.000'
+  - docId: B07V6P34M7
+    rating: '3.000'
+  - docId: B07CSX25JB
+    rating: '3.000'
+- query: laptop accessories
+  ratings:
+  - docId: B08C316XVF
+    rating: '3.000'
+  - docId: B088HJPN6D
+    rating: '3.000'
+  - docId: B075Y6Y9H5
+    rating: '3.000'
+  - docId: B07QQB7552
+    rating: '0.000'
+  - docId: B081721LTM
+    rating: '0.000'
+- query: picture frame
+  ratings:
+  - docId: B01I5SLS9A
+    rating: '0.000'
+  - docId: B00BT0MW4W
+    rating: '1.000'
+  - docId: B08T5QXC6W
+    rating: '1.000'
+  - docId: B07R46ZXMM
+    rating: '1.000'
+  - docId: B07N38BPBK
+    rating: '0.000'
+- query: tv
+  ratings:
+  - docId: B07K1H1G3M
+    rating: '0.000'
+  - docId: B07THVCJK3
+    rating: '2.000'
+  - docId: B07FPP6TB5
+    rating: '3.000'
+  - docId: B07Q7Z9DJ3
+    rating: '1.000'
+  - docId: B07PYPCX21
+    rating: '1.000'
+name: LLM Judgments for Product Search Query Set
+status: COMPLETED
+timestamp: '2026-07-01T13:10:55.428Z'
+type: IMPORT_JUDGMENT
+
+
+        ###FACTS
+        {}
+
+        ",
+"
+               Give me an overview of the last 5 most recently created query sets.
+               Include the following attributes per query set: the id, name,
+               description, timestamp and the actual query set, listing a sample
+               of 10 example queries contained in the respective query set.
+               ","llm-rubric: 
+        Below under the header '###SEQUENCE' a few expected results are listed in yaml format.
+        Each root element in the yaml listing refers to a single result.
+        The keys in the yaml format are a description of the meaning under which the
+        corresponding value shall appear in the response text. If the key is a combination of
+        words combined by some delimiter, try to derive the meaning from the sequence of
+        words it is made of. If the key and the context under which the value is mentioned
+        in the response do not match, fail the assertion.
+        Under a second header '###FACTS' there might be additional key - value pairs
+        to check for occurrence in the response text. Here again the key gives the context
+        under which mentioning of the value is expected.
+        If no key-value pairs occur in this section, then nothing is to be asserted here.
+        Compare floating point values only up to the second decimal.
+        Fail the test if the information provided below within both headers can not be checked
+        against the response because some parts are missing. Statements such as some field
+        or the response being too big and thus not being able to retrieve those also
+        counts as fail. When comparing the expected query set with the result, small query sets with <= 10 elements should be listed fully in the response and reflect the expectation, while for longer lists a subsample of 10 queries is sufficient. Make sure all of those queries also appear in the listed expectation.
+
+        ###SEQUENCE
+        id: d4e59d85-162c-4eb7-a60b-a0a3d9a64f35
+name: Representative Queries
+querySetQueries:
+- queryText: laptop stand
+- queryText: wireless earbuds
+- queryText: hoodie
+- queryText: wine glass
+- queryText: rc cars
+- queryText: toys for boys
+- queryText: lego friends
+- queryText: othoking bamboo charging station
+- queryText: phone charger
+- queryText: alarm clock
+timestamp: '2026-07-01T13:10:55.321Z'
+---
+id: 9a41153c-1cec-438b-88da-d780c199b3cd
+name: ESCI Queries
+querySetQueries:
+- queryText: t towels kitchen
+- queryText: table top bandsaw for metal
+- queryText: tan strappy heels for women
+- queryText: tank top plus size women
+- queryText: tape and mudding tools
+- queryText: tastefully simple spinach and herb dip mix
+- queryText: tennis lacoste hombre
+- queryText: 1.75 leather belts without buckles
+- queryText: the one for whom food is not enough gorman
+- queryText: thin leather strap
+timestamp: '2026-07-01T13:10:52.019Z'
+---
+id: 21af87ce-a8df-4cff-a5f3-aa4ea31d3f8e
+name: TVs
+querySetQueries:
+- queryText: tv
+- queryText: led tv
+timestamp: '2026-07-01T13:10:51.966Z'
+---
+id: e3965fe8-4dc6-47e1-a016-f9e445d28693
+name: Top 20
+querySetQueries:
+- queryText: black iphone 14 pro max case
+- queryText: tv
+- queryText: bacl
+- queryText: printer
+- queryText: black laptop case
+- queryText: wireless earbuds
+- queryText: apple watch
+- queryText: laptop
+- queryText: gaming chair
+- queryText: shoes
+timestamp: '2026-07-01T13:10:49.435Z'
+
+
+        ###FACTS
+        {}
+
+        ",

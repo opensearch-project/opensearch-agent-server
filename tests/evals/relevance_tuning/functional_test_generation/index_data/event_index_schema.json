@@ -1,0 +1,375 @@
+{
+    "mappings": {
+      "properties": {
+        "action_name": {
+          "type": "keyword",
+          "ignore_above": 100
+        },
+        "application": {
+          "type": "keyword",
+          "ignore_above": 256
+        },
+        "client_id": {
+          "type": "keyword",
+          "ignore_above": 100
+        },
+        "event_attributes": {
+          "dynamic": "true",
+          "properties": {
+            "browser": {
+              "type": "text",
+              "fields": {
+                "keyword": {
+                  "type": "keyword",
+                  "ignore_above": 256
+                }
+              }
+            },
+            "data": {
+              "properties": {
+                "internal_id": {
+                  "type": "text",
+                  "fields": {
+                    "keyword": {
+                      "type": "keyword",
+                      "ignore_above": 256
+                    }
+                  }
+                },
+                "object_id": {
+                  "type": "text",
+                  "fields": {
+                    "keyword": {
+                      "type": "keyword",
+                      "ignore_above": 256
+                    }
+                  }
+                },
+                "object_id_field": {
+                  "type": "text",
+                  "fields": {
+                    "keyword": {
+                      "type": "keyword",
+                      "ignore_above": 256
+                    }
+                  }
+                }
+              }
+            },
+            "dwell_time": {
+              "type": "float"
+            },
+            "ip": {
+              "type": "text",
+              "fields": {
+                "keyword": {
+                  "type": "keyword",
+                  "ignore_above": 256
+                }
+              }
+            },
+            "object": {
+              "properties": {
+                "ancestors": {
+                  "type": "text",
+                  "fields": {
+                    "keyword": {
+                      "type": "keyword",
+                      "ignore_above": 256
+                    }
+                  }
+                },
+                "checkIdleStateRateMs": {
+                  "type": "long"
+                },
+                "content": {
+                  "type": "text",
+                  "fields": {
+                    "keyword": {
+                      "type": "keyword",
+                      "ignore_above": 256
+                    }
+                  }
+                },
+                "currentIdleTimeMs": {
+                  "type": "long"
+                },
+                "currentPageName": {
+                  "type": "text",
+                  "fields": {
+                    "keyword": {
+                      "type": "keyword",
+                      "ignore_above": 256
+                    }
+                  }
+                },
+                "description": {
+                  "type": "text",
+                  "fields": {
+                    "keyword": {
+                      "type": "keyword",
+                      "ignore_above": 256
+                    }
+                  }
+                },
+                "docs_version": {
+                  "type": "text",
+                  "fields": {
+                    "keyword": {
+                      "type": "keyword",
+                      "ignore_above": 256
+                    }
+                  }
+                },
+                "duration": {
+                  "type": "long"
+                },
+                "hiddenPropName": {
+                  "type": "text",
+                  "fields": {
+                    "keyword": {
+                      "type": "keyword",
+                      "ignore_above": 256
+                    }
+                  }
+                },
+                "id": {
+                  "type": "long"
+                },
+                "idleTimeoutMs": {
+                  "type": "long"
+                },
+                "internal_id": {
+                  "type": "keyword"
+                },
+                "isUserCurrentlyIdle": {
+                  "type": "boolean"
+                },
+                "isUserCurrentlyOnPage": {
+                  "type": "boolean"
+                },
+                "name": {
+                  "type": "keyword",
+                  "ignore_above": 256
+                },
+                "object_detail": {
+                  "properties": {
+                    "date_released": {
+                      "type": "date"
+                    },
+                    "filter": {
+                      "type": "text",
+                      "fields": {
+                        "keyword": {
+                          "type": "keyword",
+                          "ignore_above": 256
+                        }
+                      }
+                    },
+                    "isTrusted": {
+                      "type": "boolean"
+                    },
+                    "margin": {
+                      "type": "long"
+                    },
+                    "price": {
+                      "type": "long"
+                    },
+                    "supplier": {
+                      "type": "text",
+                      "fields": {
+                        "keyword": {
+                          "type": "keyword",
+                          "ignore_above": 256
+                        }
+                      }
+                    }
+                  }
+                },
+                "object_id": {
+                  "type": "keyword",
+                  "ignore_above": 256
+                },
+                "object_id_field": {
+                  "type": "keyword",
+                  "ignore_above": 100
+                },
+                "results_num": {
+                  "type": "long"
+                },
+                "search_term": {
+                  "type": "text",
+                  "fields": {
+                    "keyword": {
+                      "type": "keyword",
+                      "ignore_above": 256
+                    }
+                  }
+                },
+                "title": {
+                  "type": "text",
+                  "fields": {
+                    "keyword": {
+                      "type": "keyword",
+                      "ignore_above": 256
+                    }
+                  }
+                },
+                "transaction_id": {
+                  "type": "text",
+                  "fields": {
+                    "keyword": {
+                      "type": "keyword",
+                      "ignore_above": 256
+                    }
+                  }
+                },
+                "type": {
+                  "type": "text",
+                  "fields": {
+                    "keyword": {
+                      "type": "keyword",
+                      "ignore_above": 256
+                    }
+                  }
+                },
+                "url": {
+                  "type": "text",
+                  "fields": {
+                    "keyword": {
+                      "type": "keyword",
+                      "ignore_above": 256
+                    }
+                  }
+                },
+                "version": {
+                  "type": "text",
+                  "fields": {
+                    "keyword": {
+                      "type": "keyword",
+                      "ignore_above": 256
+                    }
+                  }
+                },
+                "versionLabel": {
+                  "type": "text",
+                  "fields": {
+                    "keyword": {
+                      "type": "keyword",
+                      "ignore_above": 256
+                    }
+                  }
+                },
+                "visibilityChangeEventName": {
+                  "type": "text",
+                  "fields": {
+                    "keyword": {
+                      "type": "keyword",
+                      "ignore_above": 256
+                    }
+                  }
+                }
+              }
+            },
+            "page_id": {
+              "type": "text",
+              "fields": {
+                "keyword": {
+                  "type": "keyword",
+                  "ignore_above": 256
+                }
+              }
+            },
+            "position": {
+              "properties": {
+                "ordinal": {
+                  "type": "integer"
+                },
+                "page_depth": {
+                  "type": "integer"
+                },
+                "scroll_depth": {
+                  "type": "integer"
+                },
+                "trail": {
+                  "type": "text",
+                  "fields": {
+                    "keyword": {
+                      "type": "keyword",
+                      "ignore_above": 256
+                    }
+                  }
+                },
+                "x": {
+                  "type": "integer"
+                },
+                "y": {
+                  "type": "integer"
+                }
+              }
+            },
+            "result_count": {
+              "type": "long"
+            },
+            "session_id": {
+              "type": "text",
+              "fields": {
+                "keyword": {
+                  "type": "keyword",
+                  "ignore_above": 256
+                }
+              }
+            }
+          }
+        },
+        "message": {
+          "type": "keyword",
+          "ignore_above": 1024
+        },
+        "message_type": {
+          "type": "keyword",
+          "ignore_above": 100
+        },
+        "query_id": {
+          "type": "keyword",
+          "ignore_above": 100
+        },
+        "session_id": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "timestamp": {
+          "type": "date",
+          "format": "strict_date_time",
+          "ignore_malformed": true
+        },
+        "user_id": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "user_query": {
+          "type": "keyword"
+        }
+      }
+    },
+    "settings": {
+      "index": {
+        "replication": {
+          "type": "DOCUMENT"
+        },
+        "number_of_shards": "1",
+        "number_of_replicas": "0"
+      }
+    }
+}
+

@@ -1,0 +1,210 @@
+prompt,__expected1,__expected2,__metadata:runId,__metadata:threadId
+"
+                Help me improve the query 'shoe super' in the index 'test_doc_index'
+                and utilize the tracking data as available in the index 'test_event_index'
+                to make informed guesses about what could improve the ranking.
+                Form a few hypothesis and test test them, and give me an overview of the
+                results. Directly proceed with the needed tests without asking.
+                For evaluations base your judgements on the observed tracking data
+                rather than LLM based judgements. Utilize the per-product CTR for this
+                purpose.
+                Here is my current DSL query:
+                POST test_doc_index/_search
+                {
+                  'query': {
+                    'multi_match': {
+                      'query': 'shoe super',
+                      'fields': [
+                        'asin',
+                        'title',
+                        'category',
+                        'bullet_points',
+                        'description',
+                        'brand',
+                        'color'
+                      ]
+                    }
+                  }
+                }
+                ","llm-rubric: 
+                            The response should contain the suggestion of applying
+                            a field boost to the 'brand' field and the returned experiment
+                            results should confirm a positive uplift with suitable metrics
+                            reflecting the result of products that show more interactions
+                            as per tracking data to appear at lower positions in the
+                            search result.
+                            ",,,
+"
+                Help me improve the query 'sweet trousers green' in the index 'test_doc_index'
+                and utilize the tracking data as available in the index 'test_event_index'
+                to make informed guesses about what could improve the ranking.
+                Form a few hypothesis and test test them, and give me an overview of the
+                results. Directly proceed with the needed tests without asking.
+                For evaluations base your judgements on the observed tracking data
+                rather than LLM based judgements. Utilize the per-product CTR for this
+                purpose.
+                Here is my current DSL query:
+                POST test_doc_index/_search
+                {
+                  'query': {
+                    'multi_match': {
+                      'query': 'shoe super',
+                      'fields': [
+                        'asin',
+                        'title',
+                        'category',
+                        'bullet_points',
+                        'description',
+                        'brand',
+                        'color'
+                      ]
+                    }
+                  }
+                }
+                ","llm-rubric: 
+                            The response should contain the suggestion of applying
+                            a field boost to the 'color' field and the returned experiment
+                            results should confirm a positive uplift with suitable metrics
+                            reflecting the result of products that show more interactions
+                            as per tracking data to appear at lower positions in the
+                            search result.
+                            ",,,
+"
+                    Help me improve the query 'ninhendo swithc' in the index 'test_doc_index'
+                    and utilize the tracking data as available in the index 'test_event_index'
+                    as well as the query data in index 'test_query_index'.
+                    to make informed guesses about what could improve the ranking.
+                    Form a few hypothesis and test test them, and give me an overview of the
+                    results. Directly proceed with the needed tests without asking.
+                    For evaluations base your judgements on the observed tracking data
+                    rather than LLM based judgements. Utilize the per-product CTR for this
+                    purpose.
+                    Here is my current DSL query:
+                    POST test_doc_index/_search
+                    {
+                      'query': {
+                        'multi_match': {
+                          'query': 'shoe super',
+                          'fields': [
+                            'asin',
+                            'title',
+                            'category',
+                            'bullet_points',
+                            'description',
+                            'brand',
+                            'color'
+                          ]
+                        }
+                      }
+                    }
+                    ","llm-rubric: 
+                                The response should contain the suggestions of correcting
+                                the wrongly spelled underperforming
+                                query (via spellcheck, fuzzy matching or similar techniques)
+                                to be able to use interaction
+                                information of a corrected query with higher interaction rates.
+                                The returned experiment results should confirm a
+                                positive uplift with suitable metrics
+                                reflecting that the corrected query now fixes
+                                the retrieval problem and correct products are sufaced.
+                                ",,,
+"
+        Help me improve the query samsung. Here is my current DSL query:
+          POST ecommerce/_search
+          {
+            'query': {
+              'multi_match': {
+                'query': 'samsung',
+                'fields': [
+                  'asin',
+                  'title',
+                  'category',
+                  'bullet_points',
+                  'description',
+                  'brand',
+                  'color'
+                ]
+              }
+            }
+          }
+          Come back to me with your suggestions and already perform the needed analysis to determine the better configuration.
+          Do not ask me for approval of the analysis steps. Besides the results, mention all major steps taken, such as needed configurations,
+          analysis and experiments performed.
+        ","llm-rubric: 
+                Different search configurations are created, and are compared both with an offline as well as with an online evaluation.
+                Offline and online evaluation results are clearly presented and agreement and / or disagreement of results of both
+                are clearly highlighted. The response wraps up with a clear recommendation, supported by appropriate data to support it.
+                ",,,
+"
+        Run offline evaluation to compare the search configurations for three different, promising field boosts.
+        Use query set consisting of the queries: samsung, apple, nike.
+        Select the most promising boost candidates yourself and come back to me with the result.
+        Do not ask for permission to perform the required analysis steps.
+        ","llm-rubric: 
+                    Three pointwise experiments are created, one for each search configuration. Results are compared to each
+                    other and a winner reported back to the user.
+                    ",,,
+"
+          Try to find the search configuration with name 'my_baseline'.
+          In case it does not yet exist, please create it with the following configuration:
+
+          {
+            '_index': 'search-relevance-search-config',
+            '_source': {
+              'name': 'my_baseline',
+              'index': 'ecommerce',
+              'query': {
+  'query': {
+    'multi_match': {
+      'query': '%SearchText%',
+      'fields': [
+        'asin',
+        'title',
+        'category',
+        'bullet_points',
+        'description',
+        'brand',
+        'color'
+      ]
+    }
+  }
+},
+            }
+          }
+
+          Create a search configuration similar to 'my_baseline'
+          but with a title boost of 5 and a brand boost of 3.
+          Then run a pairwise comparison with these search configurations for the query
+          samsung.
+            ","llm-rubric: 
+                One new search configuration based on the reference with field boosts.
+                Pairwise experiment created, run and results reported.
+                ",,,
+"Find the 10 worst performing queries.","llm-rubric: 
+                    In the following I define categories and corresponding queries that should be mentioned under each category. The response can contain more, but the below should be contained:
+                      a) Problematic queries with zero CTR: wirelese, wirels and 'spiderwire stealth',
+                      b) high-volume queries with relatively low CTR, thus with potential high impact: gold, 'wireless earbuds'.
+                      Furthermore, the response shall contain next step suggestions including the options:
+                      1) generate hypotheses,
+                      2) analyze search results.
+                    ","icontains-any: wirelese,wirels,spiderwire stealth,wi,gold,wireless earbuds,wireless earbun",run-1,search_opt1_thread
+"Identify reasons for the bad performance of the identified queries as well as strategies. List all strategies in your response. Go ahead right away with the analysis without asking for my permission.","llm-rubric: 
+                        Response lists plausible reasons and corresponding strategies to resolve the issues.
+                        ",,run-1,search_opt1_thread
+"
+            Try out the proposed strategies one by one and give a conclusive summary of the effectiveness of each.
+            Limit the testing of strategies to at most the top 5 most promising.
+            Go ahead right away without asking for my permission.
+            ","llm-rubric: 
+                    The tried out strategies are addressing the most pressing issues identified in the previous discussion. The summary of the effectiveness of each strategy lists appropriate metrics
+                    and gives plausible reasoning as to which changes are the most effective.
+                    The suggestions explicitly make suggestions for the handling of zero result queries and poor result quality.
+                    ",,run-1,search_opt1_thread
+"
+                Based on the test results for the proposed strategies, recommend the most effective and give me concrete steps to deploy the change into the test system. C
+                an you directly do this, given your toolset?
+                Go ahead right away with answering above questions without asking for my permission. Do not yet deploy the configuration.
+                ","llm-rubric: 
+                        Given the scenario of a search system, ensure that the most effective are suggested and the response contains plausible strategies for bringing those changes into effect.
+                        The response contains answers to the posed questions but does not yet indicate the agent has taken any action towards actually deploying the solution in the given search system.
+                        ",,run-1,search_opt1_thread

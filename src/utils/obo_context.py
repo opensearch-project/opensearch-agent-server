@@ -75,11 +75,13 @@ class OboAuth(httpx.Auth):
     ) -> Generator[httpx.Request, httpx.Response, None]:
         token = self.get_token()
         if token:
-            request.headers["Authorization"] = f"Bearer {token}"
+            has_scheme = token[:7].lower().startswith(("bearer ", "basic ", "apikey "))
+            request.headers["Authorization"] = token if has_scheme else f"Bearer {token}"
         yield request
 
     async def async_auth_flow(self, request: httpx.Request):  # type: ignore[override]
         token = self.get_token()
         if token:
-            request.headers["Authorization"] = f"Bearer {token}"
+            has_scheme = token[:7].lower().startswith(("bearer ", "basic ", "apikey "))
+            request.headers["Authorization"] = token if has_scheme else f"Bearer {token}"
         yield request
