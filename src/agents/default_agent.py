@@ -140,6 +140,14 @@ def create_default_agent(
         plugins=plugins,
     )
 
+    # ag_ui_strands rebuilds a fresh per-thread agent from this template, forwarding
+    # tools and hooks but NOT plugins (Strands hides them in a private _plugin_registry
+    # with no public attr, so the wrapper's getattr-based kwarg copy misses them).
+    # Without this, the AgentSkills @hook that injects <available_skills> never fires —
+    # the skills tool is registered but the LLM never sees what skills exist.
+    if plugins:
+        agent._plugins = plugins
+
     # Keep references to prevent GC from closing the MCP session and
     # to allow the orchestrator to set tokens on subsequent requests.
     agent._mcp_client = mcp_client  # prevent GC
