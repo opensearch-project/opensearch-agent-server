@@ -31,9 +31,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Bridge AWS credentials from ~/.aws/credentials to env vars.
-# ART's agent_config.py reads AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY from
-# os.getenv() rather than using the default boto3 credential chain.
-if not os.getenv("AWS_ACCESS_KEY_ID"):
+# Only needed when using Bedrock (not Ollama).
+from utils.model_factory import get_provider  # noqa: E402
+
+if get_provider() == "bedrock" and not os.getenv("AWS_ACCESS_KEY_ID"):
     _cred_file = os.path.expanduser("~/.aws/credentials")
     if os.path.isfile(_cred_file):
         import configparser

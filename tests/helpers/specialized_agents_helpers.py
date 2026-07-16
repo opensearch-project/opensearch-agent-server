@@ -23,8 +23,7 @@ def patch_hypothesis_agent_dependencies(mock_agent: MagicMock) -> ExitStack:
     stack.enter_context(
         patch("agents.art.specialized_agents.Agent", return_value=mock_agent)
     )
-    stack.enter_context(patch("agents.art.specialized_agents.BedrockModel"))
-    stack.enter_context(patch("agents.art.specialized_agents.bedrock_session"))
+    stack.enter_context(patch("agents.art.specialized_agents.create_model"))
     stack.enter_context(patch("tools.art.experiment_tools.aggregate_experiment_results"))
     return stack
 
@@ -42,8 +41,7 @@ def patch_evaluation_agent_dependencies(mock_agent: MagicMock) -> ExitStack:
     stack.enter_context(
         patch("agents.art.specialized_agents.Agent", return_value=mock_agent)
     )
-    stack.enter_context(patch("agents.art.specialized_agents.BedrockModel"))
-    stack.enter_context(patch("agents.art.specialized_agents.bedrock_session"))
+    stack.enter_context(patch("agents.art.specialized_agents.create_model"))
     stack.enter_context(patch("tools.art.experiment_tools.aggregate_experiment_results"))
     return stack
 
@@ -61,6 +59,5 @@ def patch_ubi_agent_dependencies(mock_agent: MagicMock) -> ExitStack:
     stack.enter_context(
         patch("agents.art.specialized_agents.Agent", return_value=mock_agent)
     )
-    stack.enter_context(patch("agents.art.specialized_agents.BedrockModel"))
-    stack.enter_context(patch("agents.art.specialized_agents.bedrock_session"))
+    stack.enter_context(patch("agents.art.specialized_agents.create_model"))
     return stack

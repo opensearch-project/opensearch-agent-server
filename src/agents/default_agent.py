@@ -15,6 +15,7 @@ from strands.tools.mcp import MCPClient
 
 from server.constants import DEFAULT_MCP_SERVER_URL
 from utils.logging_helpers import get_logger, log_info_event
+from utils.model_factory import create_model
 from utils.obo_context import OboAuth
 
 logger = get_logger(__name__)
@@ -135,6 +136,7 @@ def create_default_agent(
 
     # Create agent with MCP tools and skills plugin
     agent = Agent(
+        model=create_model(),
         system_prompt=DEFAULT_SYSTEM_PROMPT,
         tools=tools,
         plugins=plugins,
