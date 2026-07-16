@@ -21,7 +21,6 @@ from strands import Agent as StrandsAgentCore
 
 from orchestrator.router import PageContextRouter
 from utils.logging_helpers import get_logger, log_debug_event, log_info_event
-from utils.obo_context import OboAuth
 
 logger = get_logger(__name__)
 
@@ -115,7 +114,6 @@ class AgentOrchestrator:
 
     def __init__(self, router: PageContextRouter) -> None:
         self._agent_factories: dict[str, dict[str, Any]] = {}
-        self._cached_agui_agents: dict[str, AGUIStrandsAgent] = {}
         self._router = router
 
     def register_agent_factory(
@@ -191,50 +189,27 @@ class AgentOrchestrator:
                 f"Available: {list(self._agent_factories)}"
             )
 
-        # Reuse a cached AGUIStrandsAgent so that its _agents_by_thread dict
-        # (and the Strands ConversationManager inside each per-thread agent)
-        # persists across requests — giving the agent conversation memory.
-        agui_agent = self._cached_agui_agents.get(agent_name)
-        if agui_agent is None:
-            strands_agent = factory_info["factory"]()
-            agui_agent = AGUIStrandsAgent(
-                agent=strands_agent,
-                name=agent_name,
-                description=factory_info["description"],
-                config=factory_info["config"],
-            )
-            # Keep the MCP client reference on the wrapper to prevent GC
-            # from closing the MCP session.
-            mcp_ref = getattr(strands_agent, "_mcp_client", None)
-            if mcp_ref is not None:
-                agui_agent._mcp_client = mcp_ref
-            # Keep the OboAuth instance so we can call set_token() on
-            # subsequent requests.
-            obo_auth = getattr(strands_agent, "_obo_auth", None)
-            if obo_auth is not None:
-                agui_agent._obo_auth = obo_auth
-            self._cached_agui_agents[agent_name] = agui_agent
-            log_debug_event(
-                logger,
-                f"Created and cached agent '{agent_name}'",
-                "orchestrator.agent_created",
-                agent_name=agent_name,
-            )
-        else:
-            log_debug_event(
-                logger,
-                f"Reusing cached agent '{agent_name}'",
-                "orchestrator.agent_reused",
-                agent_name=agent_name,
-            )
+        # Per-request agent creation ensures credential isolation across concurrent tenants
+        strands_agent = factory_info["factory"]()
+        agui_agent = AGUIStrandsAgent(
+            agent=strands_agent,
+            name=agent_name,
+            description=factory_info["description"],
+            config=factory_info["config"],
+        )
 
-        # Set the OBO token on the agent's OboAuth instance.  This is
-        # thread-safe (lock-protected) and visible to the MCP client's
-        # background thread where httpx requests are actually executed.
         token = _extract_bearer_token(headers)
-        obo_auth = getattr(agui_agent, "_obo_auth", None)
+        obo_auth = getattr(strands_agent, "_obo_auth", None)
         if obo_auth is not None:
             obo_auth.set_token(token)
 
-        async for event in agui_agent.run(input_data):
-            yield event
+        try:
+            async for event in agui_agent.run(input_data):
+                yield event
+        finally:
+            mcp_client = getattr(strands_agent, "_mcp_client", None)
+            if mcp_client is not None:
+                try:
+                    mcp_client.stop()
+                except Exception:
+                    pass

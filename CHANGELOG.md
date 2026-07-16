@@ -7,6 +7,7 @@
 
 ### Fixed
 - Default agent now respects `BEDROCK_INFERENCE_PROFILE_ARN` env var instead of silently falling back to a hardcoded Sonnet 4 model (fixes #94)
+- Fix credential cross-contamination under concurrent requests
 ### Removed
 
 ## [0.2.0] - 2026-04-10
