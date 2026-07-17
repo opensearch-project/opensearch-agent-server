@@ -275,3 +275,125 @@ class TestPerRequestAgentCreation:
                     pass
 
         assert len(orchestrator._agents_created) == 5
+
+
+class TestInvokeCredentialIsolation:
+    """Tests that concurrent /invoke requests get isolated credentials."""
+
+    @pytest.mark.asyncio
+    async def test_concurrent_invoke_requests_get_separate_agents(
+        self, orchestrator
+    ):
+        """Each concurrent invoke request must create its own agent instance."""
+        async def run_invoke(token):
+            return await orchestrator.invoke(
+                prompt="hello",
+                agent_name="default",
+                headers={"authorization": f"Bearer {token}"},
+            )
+
+        await asyncio.gather(
+            run_invoke("token_A"),
+            run_invoke("token_B"),
+        )
+
+        assert len(orchestrator._agents_created) == 2
+
+    @pytest.mark.asyncio
+    async def test_invoke_each_request_gets_its_own_token(self, orchestrator):
+        """Each invoke agent instance gets the correct token."""
+        await orchestrator.invoke(
+            prompt="hello",
+            agent_name="default",
+            headers={"authorization": "Bearer token_alice"},
+        )
+        await orchestrator.invoke(
+            prompt="hello",
+            agent_name="default",
+            headers={"authorization": "Bearer token_bob"},
+        )
+
+        alice_agent = orchestrator._agents_created[0]
+        bob_agent = orchestrator._agents_created[1]
+
+        alice_agent._obo_auth.set_token.assert_called_once_with("token_alice")
+        bob_agent._obo_auth.set_token.assert_called_once_with("token_bob")
+
+    @pytest.mark.asyncio
+    async def test_invoke_no_shared_obo_auth(self, orchestrator):
+        """Each invoke request must have a different OboAuth instance."""
+        await orchestrator.invoke(
+            prompt="hello", agent_name="default", headers=None
+        )
+        await orchestrator.invoke(
+            prompt="hello", agent_name="default", headers=None
+        )
+
+        agent_1 = orchestrator._agents_created[0]
+        agent_2 = orchestrator._agents_created[1]
+        assert agent_1._obo_auth is not agent_2._obo_auth
+
+
+class TestInvokeMcpClientCleanup:
+    """Tests that /invoke properly cleans up MCP client resources."""
+
+    @pytest.mark.asyncio
+    async def test_invoke_mcp_client_stopped_after_success(self, orchestrator):
+        """MCP client must be stopped after a successful invoke."""
+        await orchestrator.invoke(
+            prompt="hello", agent_name="default", headers=None
+        )
+
+        agent = orchestrator._agents_created[0]
+        agent._mcp_client.stop.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_invoke_mcp_client_stopped_on_error(self, orchestrator):
+        """MCP client must be stopped even if invoke raises."""
+        # Make the agent call raise
+        def failing_agent(prompt):
+            raise RuntimeError("agent exploded")
+
+        original_factory = orchestrator._agent_factories["default"]["factory"]
+
+        def factory_that_fails():
+            agent = original_factory()
+            agent.side_effect = RuntimeError("agent exploded")
+            return agent
+
+        orchestrator._agent_factories["default"]["factory"] = factory_that_fails
+
+        with pytest.raises(RuntimeError):
+            await orchestrator.invoke(
+                prompt="hello", agent_name="default", headers=None
+            )
+
+        agent = orchestrator._agents_created[0]
+        agent._mcp_client.stop.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_invoke_no_mcp_client_does_not_error(self, orchestrator):
+        """Agent without _mcp_client should not error on cleanup."""
+        original_factory = orchestrator._agent_factories["default"]["factory"]
+
+        def factory_no_mcp():
+            agent = original_factory()
+            del agent._mcp_client
+            return agent
+
+        orchestrator._agent_factories["default"]["factory"] = factory_no_mcp
+
+        # Should not raise
+        await orchestrator.invoke(
+            prompt="hello", agent_name="default", headers=None
+        )
+
+    @pytest.mark.asyncio
+    async def test_invoke_factory_called_every_request(self, orchestrator):
+        """Factory must be called on every invoke, not cached."""
+        for _ in range(5):
+            await orchestrator.invoke(
+                prompt="hello", agent_name="default", headers=None
+            )
+
+        assert len(orchestrator._agents_created) == 5

@@ -4,6 +4,7 @@
 ### Added
 - Support using Ollama as model provider
 - PPL reference skill and skills auto-discovery for the default agent
+- Support non-streaming `/invoke` endpoint
 
 ### Fixed
 - Default agent now respects `BEDROCK_INFERENCE_PROFILE_ARN` env var instead of silently falling back to a hardcoded Sonnet 4 model (fixes #94)

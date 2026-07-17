@@ -10,6 +10,7 @@ instances stored on each agent's httpx client — the orchestrator calls
 
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import AsyncIterator, Callable
 from typing import Any
@@ -208,6 +209,76 @@ class AgentOrchestrator:
                 yield event
         finally:
             mcp_client = getattr(strands_agent, "_mcp_client", None)
+            if mcp_client is not None:
+                try:
+                    mcp_client.stop()
+                except Exception:
+                    pass
+
+    async def invoke(
+        self,
+        prompt: str | list[dict],
+        agent_name: str | None = None,
+        headers: dict[str, str] | None = None,
+        timeout: float = 600,
+    ) -> str:
+        """Invoke an agent synchronously and return the final response.
+
+        Unlike :meth:`run` which streams AG-UI events, this calls the Strands
+        Agent directly and returns the complete text response.
+
+        Args:
+            prompt: String query or message list for the Strands Agent.
+            agent_name: Explicit agent name. If ``None``, uses the default agent.
+            headers: Optional HTTP headers forwarded from the request.
+            timeout: Maximum seconds to wait for the agent to complete.
+
+        Returns:
+            The agent's final response as a string.
+
+        Raises:
+            RuntimeError: If no agent factory is registered with the given name.
+            TimeoutError: If the agent does not complete within the timeout.
+        """
+
+        if agent_name is None:
+            agent_name = self._router.route(None).name
+
+        factory_info = self._agent_factories.get(agent_name)
+        if factory_info is None:
+            raise RuntimeError(
+                f"No agent factory registered with name '{agent_name}'. "
+                f"Available: {list(self._agent_factories)}"
+            )
+
+        agent = factory_info["factory"]()
+
+        token = _extract_bearer_token(headers)
+        obo_auth = getattr(agent, "_obo_auth", None)
+        if obo_auth is not None:
+            obo_auth.set_token(token)
+
+        log_info_event(
+            logger,
+            f"Invoking agent '{agent_name}' (non-streaming, timeout={timeout}s)",
+            "orchestrator.invoke",
+            agent_name=agent_name,
+            timeout=timeout,
+        )
+
+        try:
+            result = await asyncio.wait_for(
+                asyncio.to_thread(agent, prompt),
+                timeout=timeout,
+            )
+            return str(result) if result else ""
+        except asyncio.TimeoutError:
+            agent.cancel()
+            raise TimeoutError(
+                f"Agent '{agent_name}' did not complete within {timeout}s."
+            )
+        finally:
+            mcp_client = getattr(agent, "_mcp_client", None)
             if mcp_client is not None:
                 try:
                     mcp_client.stop()
