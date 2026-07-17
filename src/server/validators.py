@@ -24,6 +24,7 @@ async def create_run(input_data: ValidatedRunAgentInput) -> StreamingResponse:
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from ag_ui.core import Context, Message, RunAgentInput, Tool
@@ -37,6 +38,12 @@ from pydantic import (
 )
 from pydantic.alias_generators import to_camel
 from pydantic_core import PydanticCustomError
+
+from server.constants import DEFAULT_MAX_TOOL_RESULT_BYTES
+
+# On a continuation run a client-returned tool result is untrusted input that flows straight
+# into the model context, so bound it at the API boundary (context management, #138).
+_MAX_TOOL_RESULT_BYTES = DEFAULT_MAX_TOOL_RESULT_BYTES
 
 __all__ = ["ValidatedRunAgentInput"]
 
@@ -299,6 +306,29 @@ class ValidatedRunAgentInput(BaseModel):
                             f"Example: {{'role': '{getattr(msg, 'role', 'user')}', 'content': 'Your message here'}}"
                         ),
                         {"field": f"messages[{idx}].content", "index": idx},
+                    )
+
+            # Bound a client-returned tool result at the API boundary (see _MAX_TOOL_RESULT_BYTES).
+            if getattr(msg, "role", None) == "tool":
+                content = getattr(msg, "content", None)
+                try:
+                    size = (
+                        len(content.encode("utf-8"))
+                        if isinstance(content, str)
+                        else len(json.dumps(content, default=str).encode("utf-8"))
+                    )
+                except (TypeError, ValueError):
+                    size = _MAX_TOOL_RESULT_BYTES + 1
+                if size > _MAX_TOOL_RESULT_BYTES:
+                    raise PydanticCustomError(
+                        "tool_result_too_large",
+                        "messages[{index}] tool result is too large ({size} bytes, max {max} bytes).",
+                        {
+                            "field": f"messages[{idx}]",
+                            "index": idx,
+                            "size": size,
+                            "max": _MAX_TOOL_RESULT_BYTES,
+                        },
                     )
 
         return v

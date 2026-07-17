@@ -11,6 +11,10 @@ from dotenv import load_dotenv
 from strands import Agent
 from strands.tools.mcp import MCPClient
 
+from agents.context_management import (
+    ToolOutputTruncationHook,
+    create_conversation_manager,
+)
 from utils.logging_helpers import get_logger, log_info_event
 from utils.model_factory import create_model
 from utils.monitored_tool import monitored_tool
@@ -304,6 +308,8 @@ async def hypothesis_agent(query: str) -> str:
             model=create_model(),
             system_prompt=HYPOTHESIS_GENERATOR_SYSTEM_PROMPT,
             tools=[*_mcp_tools, aggregate_experiment_results],
+            conversation_manager=create_conversation_manager(),
+            hooks=[ToolOutputTruncationHook()],
         )
 
         # Invoke agent and return response
@@ -343,6 +349,8 @@ async def evaluation_agent(query: str) -> str:
             model=create_model(),
             system_prompt=EVALUATION_AGENT_SYSTEM_PROMPT,
             tools=[*_mcp_tools, aggregate_experiment_results],
+            conversation_manager=create_conversation_manager(),
+            hooks=[ToolOutputTruncationHook()],
         )
 
         # Invoke agent and return response
@@ -382,6 +390,8 @@ async def user_behavior_analysis_agent(query: str) -> str:
             model=create_model(tier="small"),
             system_prompt=USER_BEHAVIOR_ANALYSIS_AGENT_SYSTEM_PROMPT,
             tools=[*_mcp_tools, compute_ubi_metrics],
+            conversation_manager=create_conversation_manager(),
+            hooks=[ToolOutputTruncationHook()],
         )
 
         # Invoke agent and return response

@@ -14,6 +14,10 @@ from mcp.client.streamable_http import streamable_http_client
 from strands import Agent, AgentSkills, Skill
 from strands.tools.mcp import MCPClient
 
+from agents.context_management import (
+    ToolOutputTruncationHook,
+    create_conversation_manager,
+)
 from server.constants import DEFAULT_MCP_SERVER_URL
 from utils.logging_helpers import get_logger, log_info_event
 from utils.model_factory import create_model
@@ -179,6 +183,8 @@ def create_default_agent(opensearch_url: str) -> Agent:
         system_prompt=DEFAULT_SYSTEM_PROMPT,
         tools=tools,
         plugins=plugins,
+        conversation_manager=create_conversation_manager(),
+        hooks=[ToolOutputTruncationHook()],
     )
 
     # Keep references to prevent GC from closing the MCP session and

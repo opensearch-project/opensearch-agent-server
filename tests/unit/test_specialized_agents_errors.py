@@ -195,6 +195,9 @@ class TestSpecializedAgentsErrors:
         )
         stack.enter_context(patch("agents.art.specialized_agents.create_model"))
         stack.enter_context(
+            patch("agents.art.specialized_agents.create_conversation_manager")
+        )
+        stack.enter_context(
             patch("tools.art.experiment_tools.aggregate_experiment_results")
         )
 

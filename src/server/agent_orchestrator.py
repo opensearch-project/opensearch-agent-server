@@ -19,6 +19,7 @@ from ag_ui_strands import StrandsAgent as AGUIStrandsAgent
 from ag_ui_strands.config import StrandsAgentConfig
 from strands import Agent as StrandsAgentCore
 
+from agents.context_management import apply_context_management
 from orchestrator.router import PageContextRouter
 from utils.logging_helpers import get_logger, log_debug_event, log_info_event
 from utils.obo_context import OboAuth
@@ -28,6 +29,19 @@ logger = get_logger(__name__)
 # A factory callable that returns a pre-configured Strands Agent.
 # Headers are no longer passed to the factory — OboAuth handles auth.
 AgentFactory = Callable[[], StrandsAgentCore]
+
+
+class _ContextManagedThreadAgents(dict):
+    """Per-thread agent cache that re-applies context management on insert.
+
+    ``ag_ui_strands`` (0.1.1) rebuilds each per-thread ``Agent`` with ``conversation_manager``
+    and ``hooks`` dropped; intercepting the wrapper's insert re-applies both, fresh per thread
+    (see ``agents.context_management``, #138).
+    """
+
+    def __setitem__(self, thread_id: str, agent: StrandsAgentCore) -> None:
+        apply_context_management(agent)
+        super().__setitem__(thread_id, agent)
 
 
 def _extract_app_id_from_context(context: list) -> str | None:
@@ -202,6 +216,10 @@ class AgentOrchestrator:
                 name=agent_name,
                 description=factory_info["description"],
                 config=factory_info["config"],
+            )
+            # Re-apply context management to each per-thread agent the wrapper rebuilds.
+            agui_agent._agents_by_thread = _ContextManagedThreadAgents(
+                agui_agent._agents_by_thread
             )
             # Keep the MCP client reference on the wrapper to prevent GC
             # from closing the MCP session.

@@ -21,6 +21,10 @@ from agents.art.specialized_agents import (
     set_mcp_client,
     user_behavior_analysis_agent,
 )
+from agents.context_management import (
+    ToolOutputTruncationHook,
+    create_conversation_manager,
+)
 from utils.logging_helpers import get_logger, log_info_event
 from utils.model_factory import create_model
 from utils.obo_context import OboAuth
@@ -136,6 +140,8 @@ def create_art_agent(opensearch_url: str) -> Agent:
             hypothesis_agent,
             evaluation_agent,
         ],
+        conversation_manager=create_conversation_manager(),
+        hooks=[ToolOutputTruncationHook()],
     )
 
     # Keep references to prevent GC from closing the MCP session and

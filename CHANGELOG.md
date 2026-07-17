@@ -4,6 +4,7 @@
 ### Added
 - Support using Ollama as model provider
 - PPL reference skill and skills auto-discovery for the default agent
+- Context management across all agents: proactive conversation summarization and large-tool-output truncation, plus an API-boundary cap on client-returned tool results (#138)
 
 ### Fixed
 - Default agent now respects `BEDROCK_INFERENCE_PROFILE_ARN` env var instead of silently falling back to a hardcoded Sonnet 4 model (fixes #94)

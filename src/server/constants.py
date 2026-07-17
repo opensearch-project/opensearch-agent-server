@@ -26,6 +26,9 @@ DEFAULT_SERVER_HOST: str = "0.0.0.0"
 DEFAULT_MAX_REQUEST_BODY_BYTES: int = 5 * 1024 * 1024
 """Default maximum request body size in bytes (5 MiB). 0 to disable. Oversized requests get 413."""
 
+DEFAULT_MAX_TOOL_RESULT_BYTES: int = 256 * 1024
+"""Default maximum size in bytes (256 KiB) for a single client-returned tool result."""
+
 # Default CORS configuration
 DEFAULT_CORS_METHODS: list[str] = ["GET", "POST", "OPTIONS"]
 """Default CORS allowed HTTP methods."""
