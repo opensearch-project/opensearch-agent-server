@@ -5,9 +5,13 @@
 - Support using Ollama as model provider
 - PPL reference skill and skills auto-discovery for the default agent
 - Context management across all agents: proactive conversation summarization and large-tool-output truncation, plus an API-boundary cap on client-returned tool results (#138)
+- Support non-streaming `/invoke` endpoint
 
 ### Fixed
 - Default agent now respects `BEDROCK_INFERENCE_PROFILE_ARN` env var instead of silently falling back to a hardcoded Sonnet 4 model (fixes #94)
+- Tool calls now appear in the correct position in the UI instead of at the end of the preceding text message; upgraded `ag-ui-strands` to 0.1.9 which properly emits `TEXT_MESSAGE_END` before `TOOL_CALL_START` (fixes #75)
+- Fix credential cross-contamination under concurrent requests
+- Bump mcp from 1.26.0 to 1.28.1 to address CVE-2026-59950, CVE-2026-52870, and CVE-2026-52869 (#95)
 ### Removed
 
 ## [0.2.0] - 2026-04-10

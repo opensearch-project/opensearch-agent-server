@@ -1,15 +1,15 @@
 """Agent Orchestrator — routes requests to AG-UI Strands agent wrappers.
 
-``ag_ui_strands.StrandsAgent`` instances are created once per agent name and
-then cached so that the per-thread ``StrandsAgentCore`` (and its
-``ConversationManager``) survives across requests, giving the agent persistent
-conversation memory.  Authentication is handled by :class:`~utils.obo_context.OboAuth`
+A fresh ``ag_ui_strands.StrandsAgent`` is created per request to isolate
+credentials across concurrent tenants; its MCP client is stopped once the run
+finishes.  Authentication is handled by :class:`~utils.obo_context.OboAuth`
 instances stored on each agent's httpx client — the orchestrator calls
 ``set_token()`` before each run to inject fresh credentials.
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import AsyncIterator, Callable
 from typing import Any
@@ -22,7 +22,6 @@ from strands import Agent as StrandsAgentCore
 from agents.context_management import apply_context_management
 from orchestrator.router import PageContextRouter
 from utils.logging_helpers import get_logger, log_debug_event, log_info_event
-from utils.obo_context import OboAuth
 
 logger = get_logger(__name__)
 
@@ -129,7 +128,6 @@ class AgentOrchestrator:
 
     def __init__(self, router: PageContextRouter) -> None:
         self._agent_factories: dict[str, dict[str, Any]] = {}
-        self._cached_agui_agents: dict[str, AGUIStrandsAgent] = {}
         self._router = router
 
     def register_agent_factory(
@@ -205,54 +203,102 @@ class AgentOrchestrator:
                 f"Available: {list(self._agent_factories)}"
             )
 
-        # Reuse a cached AGUIStrandsAgent so that its _agents_by_thread dict
-        # (and the Strands ConversationManager inside each per-thread agent)
-        # persists across requests — giving the agent conversation memory.
-        agui_agent = self._cached_agui_agents.get(agent_name)
-        if agui_agent is None:
-            strands_agent = factory_info["factory"]()
-            agui_agent = AGUIStrandsAgent(
-                agent=strands_agent,
-                name=agent_name,
-                description=factory_info["description"],
-                config=factory_info["config"],
-            )
-            # Re-apply context management to each per-thread agent the wrapper rebuilds.
-            agui_agent._agents_by_thread = _ContextManagedThreadAgents(
-                agui_agent._agents_by_thread
-            )
-            # Keep the MCP client reference on the wrapper to prevent GC
-            # from closing the MCP session.
-            mcp_ref = getattr(strands_agent, "_mcp_client", None)
-            if mcp_ref is not None:
-                agui_agent._mcp_client = mcp_ref
-            # Keep the OboAuth instance so we can call set_token() on
-            # subsequent requests.
-            obo_auth = getattr(strands_agent, "_obo_auth", None)
-            if obo_auth is not None:
-                agui_agent._obo_auth = obo_auth
-            self._cached_agui_agents[agent_name] = agui_agent
-            log_debug_event(
-                logger,
-                f"Created and cached agent '{agent_name}'",
-                "orchestrator.agent_created",
-                agent_name=agent_name,
-            )
-        else:
-            log_debug_event(
-                logger,
-                f"Reusing cached agent '{agent_name}'",
-                "orchestrator.agent_reused",
-                agent_name=agent_name,
-            )
+        # Per-request agent creation ensures credential isolation across concurrent tenants
+        strands_agent = factory_info["factory"]()
+        agui_agent = AGUIStrandsAgent(
+            agent=strands_agent,
+            name=agent_name,
+            description=factory_info["description"],
+            config=factory_info["config"],
+        )
+        # AGUIStrandsAgent rebuilds each per-thread Agent with conversation_manager/hooks
+        # dropped, so re-apply context management as those per-thread agents are inserted (#138).
+        agui_agent._agents_by_thread = _ContextManagedThreadAgents(
+            agui_agent._agents_by_thread
+        )
 
-        # Set the OBO token on the agent's OboAuth instance.  This is
-        # thread-safe (lock-protected) and visible to the MCP client's
-        # background thread where httpx requests are actually executed.
         token = _extract_bearer_token(headers)
-        obo_auth = getattr(agui_agent, "_obo_auth", None)
+        obo_auth = getattr(strands_agent, "_obo_auth", None)
         if obo_auth is not None:
             obo_auth.set_token(token)
 
-        async for event in agui_agent.run(input_data):
-            yield event
+        try:
+            async for event in agui_agent.run(input_data):
+                yield event
+        finally:
+            mcp_client = getattr(strands_agent, "_mcp_client", None)
+            if mcp_client is not None:
+                try:
+                    mcp_client.stop()
+                except Exception:
+                    pass
+
+    async def invoke(
+        self,
+        prompt: str | list[dict],
+        agent_name: str | None = None,
+        headers: dict[str, str] | None = None,
+        timeout: float = 600,
+    ) -> str:
+        """Invoke an agent synchronously and return the final response.
+
+        Unlike :meth:`run` which streams AG-UI events, this calls the Strands
+        Agent directly and returns the complete text response.
+
+        Args:
+            prompt: String query or message list for the Strands Agent.
+            agent_name: Explicit agent name. If ``None``, uses the default agent.
+            headers: Optional HTTP headers forwarded from the request.
+            timeout: Maximum seconds to wait for the agent to complete.
+
+        Returns:
+            The agent's final response as a string.
+
+        Raises:
+            RuntimeError: If no agent factory is registered with the given name.
+            TimeoutError: If the agent does not complete within the timeout.
+        """
+
+        if agent_name is None:
+            agent_name = self._router.route(None).name
+
+        factory_info = self._agent_factories.get(agent_name)
+        if factory_info is None:
+            raise RuntimeError(
+                f"No agent factory registered with name '{agent_name}'. "
+                f"Available: {list(self._agent_factories)}"
+            )
+
+        agent = factory_info["factory"]()
+
+        token = _extract_bearer_token(headers)
+        obo_auth = getattr(agent, "_obo_auth", None)
+        if obo_auth is not None:
+            obo_auth.set_token(token)
+
+        log_info_event(
+            logger,
+            f"Invoking agent '{agent_name}' (non-streaming, timeout={timeout}s)",
+            "orchestrator.invoke",
+            agent_name=agent_name,
+            timeout=timeout,
+        )
+
+        try:
+            result = await asyncio.wait_for(
+                asyncio.to_thread(agent, prompt),
+                timeout=timeout,
+            )
+            return str(result) if result else ""
+        except asyncio.TimeoutError:
+            agent.cancel()
+            raise TimeoutError(
+                f"Agent '{agent_name}' did not complete within {timeout}s."
+            )
+        finally:
+            mcp_client = getattr(agent, "_mcp_client", None)
+            if mcp_client is not None:
+                try:
+                    mcp_client.stop()
+                except Exception:
+                    pass
