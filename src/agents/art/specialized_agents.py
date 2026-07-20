@@ -6,15 +6,13 @@ Following the "Agents as Tools" pattern with Strands SDK
 from __future__ import annotations
 
 import os
-from typing import Any
 
-import boto3
 from dotenv import load_dotenv
 from strands import Agent
-from strands.models.bedrock import BedrockModel
 from strands.tools.mcp import MCPClient
 
 from utils.logging_helpers import get_logger, log_info_event
+from utils.model_factory import create_model
 from utils.monitored_tool import monitored_tool
 # Import experimentation tools. This agent is meant to do only sanity checks,
 # so we don't need all experiment tools.
@@ -32,16 +30,6 @@ logger = get_logger(__name__)
 
 # Load environment variables
 load_dotenv()
-
-# Create boto3 session using the default AWS credential provider chain.
-# Supports environment variables, ~/.aws/credentials, IAM roles,
-# EC2 instance profiles, ECS task roles, and temporary credentials.
-bedrock_session = boto3.Session()
-
-# create_art_agent() sets BEDROCK_INFERENCE_PROFILE_ARN / BEDROCK_HAIKU_INFERENCE_PROFILE_ARN
-# as defaults *after* this module is imported, so module-level os.getenv() would
-# always return None when the env var is not set before server start.
-# Each agent function reads the env var at call time instead.
 
 # System prompts for specialized agents
 HYPOTHESIS_GENERATOR_SYSTEM_PROMPT = """You are an expert in generating search relevance improvement hypotheses.
@@ -310,16 +298,10 @@ async def hypothesis_agent(query: str) -> str:
         return "Error: MCP tools not configured. Please initialize MCP connection first."
 
     try:
-        model = BedrockModel(
-            model_id=os.getenv("BEDROCK_INFERENCE_PROFILE_ARN"),
-            boto_session=bedrock_session,
-            streaming=True,
-        )
-
         # Use resolved tools (not MCPClient directly) to avoid calling
         # start() on an already-running session.
         agent = Agent(
-            model=model,
+            model=create_model(),
             system_prompt=HYPOTHESIS_GENERATOR_SYSTEM_PROMPT,
             tools=[*_mcp_tools, aggregate_experiment_results],
         )
@@ -355,16 +337,10 @@ async def evaluation_agent(query: str) -> str:
         return "Error: MCP tools not configured. Please initialize MCP connection first."
 
     try:
-        model = BedrockModel(
-            model_id=os.getenv("BEDROCK_INFERENCE_PROFILE_ARN"),
-            boto_session=bedrock_session,
-            streaming=True,
-        )
-
         # Use resolved tools (not MCPClient directly) to avoid calling
         # start() on an already-running session.
         agent = Agent(
-            model=model,
+            model=create_model(),
             system_prompt=EVALUATION_AGENT_SYSTEM_PROMPT,
             tools=[*_mcp_tools, aggregate_experiment_results],
         )
@@ -400,16 +376,10 @@ async def user_behavior_analysis_agent(query: str) -> str:
         return "Error: MCP tools not configured. Please initialize MCP connection first."
 
     try:
-        model = BedrockModel(
-            model_id=os.getenv("BEDROCK_HAIKU_INFERENCE_PROFILE_ARN"),
-            boto_session=bedrock_session,
-            streaming=True,
-        )
-
         # Use resolved tools (not MCPClient directly) to avoid calling
         # start() on an already-running session.
         agent = Agent(
-            model=model,
+            model=create_model(tier="small"),
             system_prompt=USER_BEHAVIOR_ANALYSIS_AGENT_SYSTEM_PROMPT,
             tools=[*_mcp_tools, compute_ubi_metrics],
         )

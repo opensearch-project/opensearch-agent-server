@@ -89,14 +89,19 @@ AG_UI_AUTH_ENABLED=false
 # CORS (allow OpenSearch Dashboards origin)
 AG_UI_CORS_ORIGINS=http://localhost:5601
 
-# LLM Provider — Option 1: AWS Bedrock
-AWS_ACCESS_KEY_ID=your_access_key
-AWS_SECRET_ACCESS_KEY=your_secret_key
-AWS_REGION=us-east-1
-BEDROCK_INFERENCE_PROFILE_ARN=arn:aws:bedrock:...
+# LLM Provider — uncomment the section for the provider you want to use:
 
-# LLM Provider — Option 2: Ollama (local)
-OLLAMA_MODEL=llama3
+# Option 1: AWS Bedrock
+# AWS_ACCESS_KEY_ID=your_access_key
+# AWS_SECRET_ACCESS_KEY=your_secret_key
+# AWS_REGION=us-east-1
+# BEDROCK_MODEL=us.anthropic.claude-sonnet-4-20250514-v1:0
+# BEDROCK_SMALL_MODEL=us.anthropic.claude-haiku-4-5-20251001-v1:0
+
+# Option 2: Ollama
+# OLLAMA_HOST=http://localhost:11434
+# OLLAMA_MODEL=llama3
+# OLLAMA_SMALL_MODEL=llama3
 
 # Logging
 AG_UI_LOG_FORMAT=human

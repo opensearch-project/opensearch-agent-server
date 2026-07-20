@@ -193,8 +193,7 @@ class TestSpecializedAgentsErrors:
         mock_agent_class = stack.enter_context(
             patch("agents.art.specialized_agents.Agent")
         )
-        stack.enter_context(patch("agents.art.specialized_agents.BedrockModel"))
-        stack.enter_context(patch("agents.art.specialized_agents.bedrock_session"))
+        stack.enter_context(patch("agents.art.specialized_agents.create_model"))
         stack.enter_context(
             patch("tools.art.experiment_tools.aggregate_experiment_results")
         )
