@@ -35,7 +35,7 @@ classifiers = [
 ]
 dependencies = [
     "opensearch-py",
-    "mcp>=1.9.0",
+    "mcp>=1.28.1",
     "strands-agents[ollama,otel]>=1.30.0",
     "openinference-instrumentation-bedrock",
     "python-dotenv",
@@ -51,7 +51,7 @@ dependencies = [
     "PyJWT>=2.8.0",
     "sqlalchemy>=2.0.0",
     "aiosqlite",
-    "ag-ui-strands>=0.1.1",
+    "ag-ui-strands>=0.1.9,<0.2.0",
 ]
 
 [project.optional-dependencies]

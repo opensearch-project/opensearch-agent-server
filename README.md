@@ -439,13 +439,10 @@ uvicorn server.ag_ui_app:app --host 0.0.0.0 --port 8002
 
 ## Contributing
 
-Contributions are welcome! Please:
+Contributions are welcome! Check out our:
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+- [Contributing Guidelines](CONTRIBUTING.md) — how to report bugs, request features, and submit pull requests
+- [Developer Guide](DEVELOPER_GUIDE.md) — how to set up your environment and add a new agent
 
 ## License
 
