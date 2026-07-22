@@ -89,14 +89,19 @@ AG_UI_AUTH_ENABLED=false
 # CORS (allow OpenSearch Dashboards origin)
 AG_UI_CORS_ORIGINS=http://localhost:5601
 
-# LLM Provider — Option 1: AWS Bedrock
-AWS_ACCESS_KEY_ID=your_access_key
-AWS_SECRET_ACCESS_KEY=your_secret_key
-AWS_REGION=us-east-1
-BEDROCK_INFERENCE_PROFILE_ARN=arn:aws:bedrock:...
+# LLM Provider — uncomment the section for the provider you want to use:
 
-# LLM Provider — Option 2: Ollama (local)
-OLLAMA_MODEL=llama3
+# Option 1: AWS Bedrock
+# AWS_ACCESS_KEY_ID=your_access_key
+# AWS_SECRET_ACCESS_KEY=your_secret_key
+# AWS_REGION=us-east-1
+# BEDROCK_MODEL=us.anthropic.claude-sonnet-4-20250514-v1:0
+# BEDROCK_SMALL_MODEL=us.anthropic.claude-haiku-4-5-20251001-v1:0
+
+# Option 2: Ollama
+# OLLAMA_HOST=http://localhost:11434
+# OLLAMA_MODEL=llama3
+# OLLAMA_SMALL_MODEL=llama3
 
 # Logging
 AG_UI_LOG_FORMAT=human
@@ -396,13 +401,10 @@ uvicorn server.ag_ui_app:app --host 0.0.0.0 --port 8002
 
 ## Contributing
 
-Contributions are welcome! Please:
+Contributions are welcome! Check out our:
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+- [Contributing Guidelines](CONTRIBUTING.md) — how to report bugs, request features, and submit pull requests
+- [Developer Guide](DEVELOPER_GUIDE.md) — how to set up your environment and add a new agent
 
 ## License
 

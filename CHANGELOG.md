@@ -2,9 +2,17 @@
 
 ## [Unreleased]
 ### Added
+- Support using Ollama as model provider
 - PPL reference skill and skills auto-discovery for the default agent
+- Support non-streaming `/invoke` endpoint
+- `agentic_search` agent (natural-language query -> OpenSearch DSL) reachable via `POST /invoke`, with a per-request generation strategy (`context.strategy`, default `direct_dsl`) and example ml-commons connector/FLOW-agent wiring
+- `/invoke` `context` (structured input forwarded to the agent) and `response_format` (opt-in ml-commons `inference_results` envelope) request fields
+
 ### Fixed
 - Default agent now respects `BEDROCK_INFERENCE_PROFILE_ARN` env var instead of silently falling back to a hardcoded Sonnet 4 model (fixes #94)
+- Tool calls now appear in the correct position in the UI instead of at the end of the preceding text message; upgraded `ag-ui-strands` to 0.1.9 which properly emits `TEXT_MESSAGE_END` before `TOOL_CALL_START` (fixes #75)
+- Fix credential cross-contamination under concurrent requests
+- Bump mcp from 1.26.0 to 1.28.1 to address CVE-2026-59950, CVE-2026-52870, and CVE-2026-52869 (#95)
 - Server now starts gracefully when ART agent dependencies are unavailable; a warning is logged and the default agent handles all requests instead of the server failing to start
 ### Removed
 

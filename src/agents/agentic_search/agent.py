@@ -1,0 +1,108 @@
+"""The ``agentic_search`` agent: NLQ -> OpenSearch DSL, reached via ``POST /invoke``.
+
+Given a natural-language ``query`` and a target ``index_name`` (in the structured
+``context``), the agent fetches the index mapping with the caller's forwarded
+credentials, dispatches to the generation strategy named by ``context.strategy``
+(default ``direct_dsl``), and returns the ``_search`` body as a JSON string. Any
+failure degrades to a broad ``match_all`` so the upstream search returns a safe
+result set instead of erroring.
+
+Registered via :func:`create_agentic_search_agent`, following the same factory
+convention as the other agents in ``src/agents``.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from typing import Any
+
+from opensearchpy import OpenSearch
+
+from agents.agentic_search.prompts import FALLBACK_DSL
+from agents.agentic_search.strategies import DEFAULT_STRATEGY, STRATEGIES
+from agents.agentic_search.strategies.base import GenerationRequest, GenerationStrategy
+from utils.model_factory import create_model
+
+logger = logging.getLogger(__name__)
+
+
+class AgenticSearchAgent:
+    """Adapts NLQ->DSL generation to the orchestrator's ``/invoke`` convention.
+
+    The orchestrator calls a context-aware agent as
+    ``agent(prompt, context=..., auth_token=...)``: ``prompt`` is the NLQ (the
+    ``query`` field), ``context`` carries ``index_name`` and an optional
+    ``strategy``, and ``auth_token`` is the caller's forwarded bearer token used
+    to reach the cluster. Returns the ``_search`` body as a JSON string.
+    """
+
+    # Signals the orchestrator to pass context + auth_token, not just the prompt.
+    accepts_invoke_context = True
+
+    def __init__(self, opensearch_url: str) -> None:
+        self._opensearch_url = opensearch_url
+        # Built once and reused across calls; the provider/credentials are fixed
+        # for the process, while each request gets a fresh stateless Agent.
+        self._model = create_model()
+
+    def __call__(
+        self,
+        prompt: str | list[dict],
+        context: dict[str, Any] | None = None,
+        auth_token: str | None = None,
+    ) -> str:
+        try:
+            return json.dumps(self._generate(prompt, context, auth_token))
+        except Exception:  # noqa: BLE001 - any failure degrades to the fallback
+            logger.exception("Agentic-search generation failed; returning fallback")
+            return FALLBACK_DSL
+
+    def _generate(
+        self,
+        prompt: str | list[dict],
+        context: dict[str, Any] | None,
+        auth_token: str | None,
+    ) -> dict[str, Any]:
+        context = context if isinstance(context, dict) else {}
+        if not isinstance(prompt, str) or not prompt.strip():
+            raise ValueError("query must be a non-empty string")
+        index_name = context.get("index_name")
+        if not index_name:
+            raise ValueError("context.index_name is required")
+
+        strategy_name = context.get("strategy", DEFAULT_STRATEGY)
+        strategy: GenerationStrategy | None = STRATEGIES.get(strategy_name)
+        if strategy is None:
+            raise ValueError(f"unknown strategy '{strategy_name}'")
+
+        client = self._client(auth_token)
+        mapping = json.dumps(client.indices.get_mapping(index=index_name))
+        dsl = strategy.generate(
+            GenerationRequest(
+                question=prompt,
+                index_name=index_name,
+                mapping=mapping,
+                context=context,
+                model=self._model,
+                client=client,
+            )
+        )
+
+        # Guard the contract: a strategy must return a JSON object (a _search
+        # body). Anything else degrades to the fallback rather than reaching the
+        # cluster as an invalid query.
+        if not isinstance(dsl, dict):
+            raise ValueError("strategy did not return a _search body object")
+        return dsl
+
+    def _client(self, auth_token: str | None) -> OpenSearch:
+        # Forward the caller's bearer token per request when present; otherwise
+        # the client falls back to its environment configuration.
+        headers = {"Authorization": f"Bearer {auth_token}"} if auth_token else None
+        return OpenSearch(hosts=[self._opensearch_url], headers=headers, timeout=30)
+
+
+def create_agentic_search_agent(opensearch_url: str) -> AgenticSearchAgent:
+    """Create the ``agentic_search`` agent (factory used at startup registration)."""
+    return AgenticSearchAgent(opensearch_url)
