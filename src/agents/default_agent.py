@@ -15,7 +15,7 @@ from strands import Agent, AgentSkills, Skill
 from strands.tools.mcp import MCPClient
 
 from agents.context_management import (
-    ToolOutputTruncationHook,
+    context_management_plugins,
     create_conversation_manager,
 )
 from server.constants import DEFAULT_MCP_SERVER_URL
@@ -164,8 +164,8 @@ def create_default_agent(opensearch_url: str) -> Agent:
     # Auto-discover and load all skills from skills/ directory
     skills = _load_all_skills()
 
-    # Prepare plugins list with AgentSkills if skills are available
-    plugins = []
+    # Prepare plugins list: context management (ContextOffloader) plus AgentSkills if any.
+    plugins = context_management_plugins()
     if skills:
         agent_skills_plugin = LoggingAgentSkills(skills=skills)
         plugins.append(agent_skills_plugin)
@@ -184,7 +184,6 @@ def create_default_agent(opensearch_url: str) -> Agent:
         tools=tools,
         plugins=plugins,
         conversation_manager=create_conversation_manager(),
-        hooks=[ToolOutputTruncationHook()],
     )
 
     # Keep references to prevent GC from closing the MCP session and

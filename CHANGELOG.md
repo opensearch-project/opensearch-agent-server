@@ -4,7 +4,7 @@
 ### Added
 - Support using Ollama as model provider
 - PPL reference skill and skills auto-discovery for the default agent
-- Context management across all agents: proactive conversation summarization and large-tool-output truncation, plus an API-boundary cap on client-returned tool results (#138)
+- Context management across all agents: proactive conversation summarization and offloading of large tool results, plus an API-boundary cap on client-returned tool results (#138)
 - Support non-streaming `/invoke` endpoint
 
 ### Fixed

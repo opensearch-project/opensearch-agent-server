@@ -33,9 +33,10 @@ AgentFactory = Callable[[], StrandsAgentCore]
 class _ContextManagedThreadAgents(dict):
     """Per-thread agent cache that re-applies context management on insert.
 
-    ``ag_ui_strands`` (0.1.1) rebuilds each per-thread ``Agent`` with ``conversation_manager``
-    and ``hooks`` dropped; intercepting the wrapper's insert re-applies both, fresh per thread
-    (see ``agents.context_management``, #138).
+    ``ag_ui_strands`` (0.1.1) rebuilds each per-thread ``Agent`` with ``conversation_manager``,
+    ``hooks``, and ``plugins`` dropped; intercepting the wrapper's insert re-applies the
+    summarizing manager and the ``ContextOffloader`` plugin, fresh per thread (see
+    ``agents.context_management``, #138).
     """
 
     def __setitem__(self, thread_id: str, agent: StrandsAgentCore) -> None:

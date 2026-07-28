@@ -1,110 +1,97 @@
 """Context management for the agents (issue #138).
 
-Maps the ml-commons AG-UI chat agent's ``context_management`` onto Strands: proactive
-summarization (``SummarizingConversationManager``) plus per-tool-result truncation
-(``ToolOutputTruncationHook``), so long conversations and large tool outputs don't
-overflow the context window.
+- ``SummarizingConversationManager`` (a Strands ``ConversationManager``) proactively
+  summarizes the oldest messages before the context window fills, preserving key
+  information while freeing space for new turns.
+- ``ContextOffloader`` (a Strands ``Plugin``) intercepts large tool results at execution
+  time, stores each block in an in-memory backend, and keeps a short preview in context;
+  it registers a ``retrieve_offloaded_content`` tool so the agent can fetch the full
+  content on demand.
 
-The ART specialists get this from their ``Agent(...)`` constructor. The default and
-ART-orchestrator agents are wrapped by ``ag_ui_strands.StrandsAgent`` (0.1.1), which
-rebuilds a per-thread ``Agent`` forwarding only ``model``/``system_prompt``/``tools``
-and dropping ``conversation_manager`` + ``hooks``; ``apply_context_management`` re-applies
-both per thread (see ``agent_orchestrator``).
+The ART specialists get both via their ``Agent(...)`` constructor. The default and
+ART-orchestrator agents are wrapped by ``ag_ui_strands``, which drops
+``conversation_manager``/``plugins`` on its per-thread rebuild, so
+``apply_context_management`` re-applies them per thread (see ``agent_orchestrator``).
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from strands.agent.conversation_manager import SummarizingConversationManager
-from strands.hooks import HookProvider, HookRegistry
-from strands.hooks.events import AfterToolCallEvent
+from strands.vended_plugins.context_offloader import ContextOffloader, InMemoryStorage
 
 from utils.logging_helpers import get_logger, log_debug_event
 
 if TYPE_CHECKING:
     from strands import Agent
+    from strands.plugins import Plugin
 
 logger = get_logger(__name__)
 
-# Strands' proactive compression triggers on a RATIO of the model's window, not an absolute
-# count. 0.85 * 200_000 (Sonnet's window) = 170_000, matching ml-commons' tokens_exceed:
-# 170000, and fires near the limit on any window (e.g. ~850k on 1M). Matches the reference agent.
-SUMMARIZATION_TRIGGER_TOKENS = 170_000
-CONTEXT_WINDOW_LIMIT = 200_000
-SUMMARIZATION_COMPRESSION_THRESHOLD = (
-    SUMMARIZATION_TRIGGER_TOKENS / CONTEXT_WINDOW_LIMIT
-)  # 0.85
-PRESERVE_RECENT_MESSAGES = 6
-MAX_TOOL_OUTPUT_CHARS = 100_000
+# SummarizingConversationManager — compression triggers on a ratio of the model's context
+# window, so 0.85 fires near the limit on any size (170k on Sonnet's 200k, ~850k on 1M).
+SUMMARY_RATIO = 0.3  # summarize the oldest 30% of messages when compression fires
+COMPRESSION_THRESHOLD = 0.85  # fire at 85% of the context window
+PRESERVE_RECENT_MESSAGES = 6  # keep the 6 most-recent messages verbatim
 
+# ContextOffloader — offload a tool result over MAX_RESULT_TOKENS, keeping a
+# PREVIEW_TOKENS-sized preview in context; full content stays retrievable on demand.
+MAX_RESULT_TOKENS = 1_500
+PREVIEW_TOKENS = 750
 
-class ToolOutputTruncationHook(HookProvider):
-    """Truncates each tool result text block to ``max_chars`` after the tool runs."""
-
-    def __init__(self, max_chars: int = MAX_TOOL_OUTPUT_CHARS) -> None:
-        self._max_chars = max_chars
-
-    def register_hooks(self, registry: HookRegistry, **kwargs: Any) -> None:
-        registry.add_callback(AfterToolCallEvent, self._truncate)
-
-    def _truncate(self, event: AfterToolCallEvent) -> None:
-        result = getattr(event, "result", None)
-        # ToolResult is a dict on success; skip anything else (e.g. an Exception).
-        if not isinstance(result, dict):
-            return
-        content = result.get("content")
-        if not isinstance(content, list):
-            return
-        for block in content:
-            if not isinstance(block, dict):
-                continue
-            text = block.get("text")
-            if isinstance(text, str) and len(text) > self._max_chars:
-                block["text"] = (
-                    text[: self._max_chars]
-                    + f"\n\n[output truncated to {self._max_chars} characters]"
-                )
+# Sentinel marking the offloader as already applied, so re-application is a no-op.
+_APPLIED_ATTR = "_context_offloader_applied"
 
 
 def create_conversation_manager() -> SummarizingConversationManager:
-    """Build a manager that proactively summarizes the oldest messages near the limit.
-
-    Uses the fixed ``SUMMARIZATION_COMPRESSION_THRESHOLD`` ratio, matching the reference agent.
-
-    Returns:
-        A ``SummarizingConversationManager`` configured for proactive compression.
-    """
+    """Build a summarizing manager configured for proactive compression."""
     log_debug_event(
         logger,
-        f"Context management: summarization trigger={SUMMARIZATION_TRIGGER_TOKENS} "
-        f"tokens, compression_threshold={SUMMARIZATION_COMPRESSION_THRESHOLD:.3f}, "
+        f"Context management: summary_ratio={SUMMARY_RATIO}, "
+        f"compression_threshold={COMPRESSION_THRESHOLD}, "
         f"preserve_recent_messages={PRESERVE_RECENT_MESSAGES}.",
         "context_management.manager_created",
-        summarization_trigger_tokens=SUMMARIZATION_TRIGGER_TOKENS,
-        compression_threshold=SUMMARIZATION_COMPRESSION_THRESHOLD,
+        summary_ratio=SUMMARY_RATIO,
+        compression_threshold=COMPRESSION_THRESHOLD,
         preserve_recent_messages=PRESERVE_RECENT_MESSAGES,
     )
     return SummarizingConversationManager(
+        summary_ratio=SUMMARY_RATIO,
         preserve_recent_messages=PRESERVE_RECENT_MESSAGES,
-        proactive_compression={
-            "compression_threshold": SUMMARIZATION_COMPRESSION_THRESHOLD
-        },
+        proactive_compression={"compression_threshold": COMPRESSION_THRESHOLD},
     )
 
 
+def create_context_offloader() -> ContextOffloader:
+    """Build a ``ContextOffloader`` backed by a fresh in-memory store per call."""
+    return ContextOffloader(
+        storage=InMemoryStorage(),
+        max_result_tokens=MAX_RESULT_TOKENS,
+        preview_tokens=PREVIEW_TOKENS,
+    )
+
+
+def context_management_plugins() -> list[Plugin]:
+    """Return the context-management plugins for ``Agent(plugins=...)`` (a fresh offloader)."""
+    return [create_context_offloader()]
+
+
 def apply_context_management(agent: Agent) -> None:
-    """Attach context management onto an already-built ``agent`` in place.
+    """Attach a fresh manager and offloader onto an already-built ``agent`` in place.
 
-    For the per-thread agents ``ag_ui_strands`` rebuilds with constructor kwargs dropped;
-    directly-built agents should use the constructor. A fresh manager is created per call
-    since it is stateful (holds the running summary) — sharing would leak across sessions.
-
-    Args:
-        agent: An already-constructed Strands Agent to augment in place.
+    Used for the per-thread agents ``ag_ui_strands`` rebuilds with constructor kwargs
+    dropped; directly-built agents use the constructor instead. Idempotent: the
+    ``_APPLIED_ATTR`` guard makes a repeated call a no-op (a second offloader add would raise).
     """
+    if getattr(agent, _APPLIED_ATTR, False):
+        return
+
     manager = create_conversation_manager()
     agent.conversation_manager = manager
-    # Wires the manager's proactive-compression BeforeModelCallEvent hook.
-    manager.register_hooks(agent.hooks)
-    ToolOutputTruncationHook().register_hooks(agent.hooks)
+    manager.register_hooks(agent.hooks)  # wire the proactive-compression hook
+    # Registers the offloader's hook + retrieve_offloaded_content tool. The sentinel
+    # above ensures this runs once per agent (a second add would raise on duplicate).
+    agent._plugin_registry.add_and_init(create_context_offloader())
+
+    setattr(agent, _APPLIED_ATTR, True)

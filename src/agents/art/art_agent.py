@@ -22,7 +22,7 @@ from agents.art.specialized_agents import (
     user_behavior_analysis_agent,
 )
 from agents.context_management import (
-    ToolOutputTruncationHook,
+    context_management_plugins,
     create_conversation_manager,
 )
 from utils.logging_helpers import get_logger, log_info_event
@@ -141,7 +141,7 @@ def create_art_agent(opensearch_url: str) -> Agent:
             evaluation_agent,
         ],
         conversation_manager=create_conversation_manager(),
-        hooks=[ToolOutputTruncationHook()],
+        plugins=context_management_plugins(),
     )
 
     # Keep references to prevent GC from closing the MCP session and
