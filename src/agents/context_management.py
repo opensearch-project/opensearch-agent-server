@@ -9,8 +9,8 @@
   content on demand.
 
 The ART specialists get both via their ``Agent(...)`` constructor. The default and
-ART-orchestrator agents are wrapped by ``ag_ui_strands``, which drops
-``conversation_manager``/``plugins`` on its per-thread rebuild, so
+ART-orchestrator agents are wrapped by ``ag_ui_strands``, which drops ``plugins`` (and
+shares one ``conversation_manager``) on its per-thread rebuild, so
 ``apply_context_management`` re-applies them per thread (see ``agent_orchestrator``).
 """
 
@@ -18,7 +18,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from strands.agent.conversation_manager import SummarizingConversationManager
+from strands.agent.conversation_manager import (
+    ConversationManager,
+    SummarizingConversationManager,
+)
 from strands.vended_plugins.context_offloader import ContextOffloader, InMemoryStorage
 
 from utils.logging_helpers import get_logger, log_debug_event
@@ -77,6 +80,15 @@ def context_management_plugins() -> list[Plugin]:
     return [create_context_offloader()]
 
 
+def _detach_manager_hooks(agent: Agent, manager: ConversationManager) -> None:
+    """Detach ``manager``'s hooks so the inherited one (ag_ui_strands >= 0.1.9 shares it) doesn't fire compression twice."""
+    registered = agent.hooks._registered_callbacks
+    for event_type, callbacks in registered.items():
+        registered[event_type] = [
+            cb for cb in callbacks if getattr(cb, "__self__", None) is not manager
+        ]
+
+
 def apply_context_management(agent: Agent) -> None:
     """Attach a fresh manager and offloader onto an already-built ``agent`` in place.
 
@@ -86,6 +98,8 @@ def apply_context_management(agent: Agent) -> None:
     """
     if getattr(agent, _APPLIED_ATTR, False):
         return
+
+    _detach_manager_hooks(agent, agent.conversation_manager)
 
     manager = create_conversation_manager()
     agent.conversation_manager = manager

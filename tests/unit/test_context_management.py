@@ -114,9 +114,9 @@ class TestApplyContextManagement:
         )
         assert _RETRIEVE_TOOL not in agent.tool_registry.registry
         assert _callback_count(agent, AfterToolCallEvent) == 0
-        # A bare agent already carries default BeforeModelCallEvent callbacks; capture the
-        # count so we can assert the proactive-compression hook is *added* on top.
-        before_bmc = _callback_count(agent, BeforeModelCallEvent)
+        # A bare agent carries its default manager's BeforeModelCallEvent callbacks;
+        # apply_context_management must swap that manager out, not stack on top of it.
+        assert _callback_count(agent, BeforeModelCallEvent) > 0
 
         apply_context_management(agent)
 
@@ -126,10 +126,10 @@ class TestApplyContextManagement:
         )
         assert _OFFLOADER_PLUGIN_NAME in agent._plugin_registry._plugins
         assert _RETRIEVE_TOOL in agent.tool_registry.registry
-        # The offloader registers an AfterToolCallEvent hook; the manager adds a
-        # BeforeModelCallEvent one (assert +1, not >=1: a bare agent already has such a hook).
+        # The offloader registers one AfterToolCallEvent hook; the fresh manager owns the
+        # single remaining BeforeModelCallEvent hook (the prior manager's were detached).
         assert _callback_count(agent, AfterToolCallEvent) == 1
-        assert _callback_count(agent, BeforeModelCallEvent) == before_bmc + 1
+        assert _callback_count(agent, BeforeModelCallEvent) == 1
 
     def test_is_idempotent(self) -> None:
         """A second call is a no-op — no duplicate-plugin error, no extra hooks."""
@@ -208,17 +208,13 @@ class TestSurvivesAgUiStrandsRebuild:
     def test_per_thread_agent_has_context_management(self) -> None:
         wrapper = self._wrapped_template()
 
-        # Baseline BeforeModelCallEvent count so we assert the proactive hook is *added*.
-        bare = Agent(model=_FakeModel(), system_prompt="sp", tools=[])
-        before_bmc = _callback_count(bare, BeforeModelCallEvent)
-
         agent = self._build_per_thread_agent(wrapper, "thread-A")
 
         assert isinstance(agent.conversation_manager, SummarizingConversationManager)
         assert _OFFLOADER_PLUGIN_NAME in agent._plugin_registry._plugins
         assert _RETRIEVE_TOOL in agent.tool_registry.registry
         assert _callback_count(agent, AfterToolCallEvent) == 1
-        assert _callback_count(agent, BeforeModelCallEvent) == before_bmc + 1
+        assert _callback_count(agent, BeforeModelCallEvent) == 1
 
     def test_distinct_threads_get_distinct_managers_and_storage(self) -> None:
         wrapper = self._wrapped_template()
