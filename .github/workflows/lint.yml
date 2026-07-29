@@ -1,0 +1,34 @@
+name: Lint and Format Check
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint & Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Install uv and Set up Python
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          enable-cache: true
+
+      - name: Install Lint Dependencies
+        run: uv sync --frozen --no-install-project --extra dev
+
+      - name: Run Ruff Lint Check
+        run: uv run --no-sync ruff check .
+
+      - name: Run Ruff Formatting Check
+        run: uv run --no-sync ruff format --check .

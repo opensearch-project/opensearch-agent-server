@@ -1,6 +1,6 @@
 ---
 name: ppl-reference
-description: Comprehensive PPL (Piped Processing Language) reference for OpenSearch with command syntax, functions, and examples for observability queries.
+description: Use when the user asks to write, generate, fix, explain, or validate a PPL query, or mentions PPL, Piped Processing Language, observability queries, or OpenSearch log/trace/span queries.
 ---
 
 # PPL Language Reference

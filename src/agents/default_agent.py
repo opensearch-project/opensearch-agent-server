@@ -7,7 +7,6 @@ Handles general queries when no specialized sub-agent matches the page context.
 from __future__ import annotations
 
 import os
-from pathlib import Path
 
 import httpx
 from mcp.client.streamable_http import streamable_http_client
@@ -55,9 +54,18 @@ You have access to OpenSearch tools via the MCP Server. Use them to answer quest
 - Cluster settings and configuration
 - Node and shard information
 
-You also have access to domain-specific skills that provide reference documentation
-and guidance for specialized tasks. Consult available skills when users need help
-with specific OpenSearch features or query languages.
+You also have access to domain-specific skills listed in <available_skills>.
+Each skill's description states when to use it. Before answering any question,
+scan the skill descriptions in <available_skills> to see if the user's request matches one. If it
+does, activate the matching skill via the `skills` tool first.
+
+The Dashboards UI lets users pick a query language (DQL, Lucene, PPL, or
+OpenSearch SQL). Respect the user's selection — use whichever language the
+context implies, do not override their choice. Before calling any tool that
+runs a query language, first look in <available_skills> for a matching
+reference skill and activate it via the `skills` tool. The skill is more
+authoritative than your training data — prefer it when it covers the
+construct you need.
 
 When answering:
 - Use the available tools to fetch real data from OpenSearch
@@ -68,65 +76,18 @@ When answering:
 """
 
 
-def _load_all_skills() -> list[Skill]:
-    """Auto-discover and load all skills from the skills directory.
-
-    Scans ``skills/`` at the project root for subdirectories containing
-    a ``SKILL.md`` file. Each valid skill directory is loaded using the
-    Strands SDK ``Skill.from_file()`` method.
-
-    Returns:
-        List of loaded Skill objects. Invalid or missing skills are
-        skipped with a warning log.
-    """
-    project_root = Path(__file__).parent.parent.parent
-    skills_dir = project_root / "skills"
-
-    if not skills_dir.exists():
-        log_info_event(
-            logger,
-            f"Skills directory not found at {skills_dir}, skipping skill loading",
-            "default_agent.skills_dir_not_found",
-            skills_dir=str(skills_dir),
-        )
-        return []
-
-    skills = []
-    for skill_path in sorted(skills_dir.iterdir()):
-        if not skill_path.is_dir() or not (skill_path / "SKILL.md").exists():
-            continue
-        try:
-            skill = Skill.from_file(skill_path)
-            skills.append(skill)
-            log_info_event(
-                logger,
-                f"Loaded skill: {skill.name}",
-                "default_agent.skill_loaded",
-                skill_name=skill.name,
-                skill_path=str(skill_path),
-            )
-        except Exception as e:
-            log_info_event(
-                logger,
-                f"Failed to load skill at {skill_path}: {e}",
-                "default_agent.skill_load_failed",
-                skill_path=str(skill_path),
-                error=str(e),
-            )
-
-    return skills
-
-
-def create_default_agent(opensearch_url: str) -> Agent:
+def create_default_agent(
+    opensearch_url: str,
+    skills: list[Skill] | None = None,
+) -> Agent:
     """Create the default agent with all OpenSearch MCP tools and skills.
 
     Connects to the OpenSearch MCP server via Streamable HTTP transport.
     The server URL defaults to ``http://localhost:3001/mcp`` and can be
     overridden with the ``MCP_SERVER_URL`` environment variable.
 
-    Auto-discovers and loads all skills from the ``skills/`` directory.
-    Each subdirectory with a ``SKILL.md`` file is loaded as a skill using
-    the Strands SDK ``AgentSkills`` plugin.
+    Skills are passed in pre-loaded (loaded once at startup by the caller)
+    to avoid per-request filesystem walks and file I/O.
 
     Authentication is handled by :class:`~utils.obo_context.OboAuth`.
     The orchestrator calls ``obo_auth.set_token()`` before each run to
@@ -136,6 +97,9 @@ def create_default_agent(opensearch_url: str) -> Agent:
     Args:
         opensearch_url: OpenSearch cluster URL (informational — the MCP
             server is assumed to already be configured for this cluster).
+        skills: Pre-loaded Skill instances to register with the agent via
+            the AgentSkills plugin. Loaded once at startup and reused
+            across requests to avoid per-request filesystem I/O.
 
     Returns:
         Configured Strands Agent with MCP tools and skills.
@@ -161,9 +125,6 @@ def create_default_agent(opensearch_url: str) -> Agent:
 
     tools = list(mcp_client.list_tools_sync())
 
-    # Auto-discover and load all skills from skills/ directory
-    skills = _load_all_skills()
-
     # Prepare plugins list: context management (ContextOffloader) plus AgentSkills if any.
     plugins = context_management_plugins()
     if skills:
@@ -185,6 +146,14 @@ def create_default_agent(opensearch_url: str) -> Agent:
         plugins=plugins,
         conversation_manager=create_conversation_manager(),
     )
+
+    # ag_ui_strands rebuilds a fresh per-thread agent from this template, forwarding
+    # tools and hooks but NOT plugins (Strands hides them in a private _plugin_registry
+    # with no public attr, so the wrapper's getattr-based kwarg copy misses them).
+    # Without this, the AgentSkills @hook that injects <available_skills> never fires —
+    # the skills tool is registered but the LLM never sees what skills exist.
+    if plugins:
+        agent._plugins = plugins
 
     # Keep references to prevent GC from closing the MCP session and
     # to allow the orchestrator to set tokens on subsequent requests.

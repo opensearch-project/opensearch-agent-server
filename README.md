@@ -106,7 +106,45 @@ AG_UI_CORS_ORIGINS=http://localhost:5601
 # Logging
 AG_UI_LOG_FORMAT=human
 AG_UI_LOG_LEVEL=INFO
+
+# Optional: additional skill paths. Use your OS's PATH separator
+# (`:` on macOS/Linux, `;` on Windows). If unset, the agent auto-discovers
+# skills in ~/.config/opensearch-agent-server/skills/ when that directory exists.
+# NOTE: setting this disables the default location — include it explicitly
+# if you still want those skills loaded.
+# AG_UI_SKILL_PATHS=/path/to/skills-a:/path/to/skills-b
 ```
+
+### Loading additional skills
+
+The default agent ships with bundled skills (e.g., `ppl-reference`). You can also load skills from external open-source registries such as [`opensearch-project/opensearch-agent-skills`](https://github.com/opensearch-project/opensearch-agent-skills) without forking this repo.
+
+Two ways to add external skills:
+
+**1. Default location (zero config):** clone into `~/.config/opensearch-agent-server/skills/`.
+
+```bash
+git clone https://github.com/opensearch-project/opensearch-agent-skills.git \
+  ~/.config/opensearch-agent-server/skills/opensearch-agent-skills
+```
+
+**2. Custom paths:** set `AG_UI_SKILL_PATHS` to one or more directories, separated like `PATH` (`:` on POSIX, `;` on Windows). When set, the default location is not scanned.
+
+```bash
+export AG_UI_SKILL_PATHS=/opt/team-skills:/opt/official-skills
+```
+
+**Verify skills loaded:**
+
+```bash
+tail -f agent-quickstart/.logs/agent-server.log | grep skill_loader
+```
+
+You should see one `skill_loader.loaded` event per skill found.
+
+**Name collisions:** if a user skill has the same `name:` (in its `SKILL.md` frontmatter) as a bundled skill, the bundled version wins and the user version is skipped — logged as `skill_loader.duplicate` at WARN level. To override, rename your skill's `name` field to something unique.
+
+**Trust model:** skill files become part of the system prompt the LLM sees, so loading a skill is effectively trusting its author. Only point `AG_UI_SKILL_PATHS` at directories you control. The default `~/.config/opensearch-agent-server/skills/` is per-user and fine for single-user setups, but is inappropriate on shared or multi-tenant hosts — on those deployments, use an operator-controlled directory that end users cannot write to.
 
 ## Quick Start
 
@@ -401,13 +439,10 @@ uvicorn server.ag_ui_app:app --host 0.0.0.0 --port 8002
 
 ## Contributing
 
-Contributions are welcome! Please:
+Contributions are welcome! Check out our:
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+- [Contributing Guidelines](CONTRIBUTING.md) — how to report bugs, request features, and submit pull requests
+- [Developer Guide](DEVELOPER_GUIDE.md) — how to set up your environment and add a new agent
 
 ## License
 

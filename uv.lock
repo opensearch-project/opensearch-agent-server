@@ -1268,7 +1268,7 @@ requires-dist = [
     { name = "slowapi" },
     { name = "sqlalchemy", specifier = ">=2.0.0" },
     { name = "sse-starlette" },
-    { name = "strands-agents", extras = ["ollama", "otel"], specifier = ">=1.30.0" },
+    { name = "strands-agents", extras = ["ollama", "otel"], specifier = ">=1.42.0" },
     { name = "uvicorn" },
 ]
 provides-extras = ["dev"]

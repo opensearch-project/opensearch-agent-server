@@ -74,6 +74,16 @@ def create_model(*, tier: str = "default"):
             or _DEFAULT_BEDROCK_MODEL_ID
         )
 
+    # Optional temperature override via LLM_TEMPERATURE. Unset leaves Bedrock's
+    # default sampling.
+    _temp_env = os.getenv("LLM_TEMPERATURE")
+    extra: dict = {}
+    if _temp_env is not None:
+        try:
+            extra["temperature"] = float(_temp_env)
+        except ValueError:
+            pass
+
     log_info_event(
         logger,
         f"Creating BedrockModel (tier={tier}, model={model_id})",
@@ -85,4 +95,5 @@ def create_model(*, tier: str = "default"):
         model_id=model_id,
         boto_session=boto3.Session(),
         streaming=True,
+        **extra,
     )

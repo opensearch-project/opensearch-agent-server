@@ -240,6 +240,7 @@ class AgentOrchestrator:
         agent_name: str | None = None,
         headers: dict[str, str] | None = None,
         timeout: float = 600,
+        context: dict[str, Any] | None = None,
     ) -> str:
         """Invoke an agent synchronously and return the final response.
 
@@ -251,6 +252,9 @@ class AgentOrchestrator:
             agent_name: Explicit agent name. If ``None``, uses the default agent.
             headers: Optional HTTP headers forwarded from the request.
             timeout: Maximum seconds to wait for the agent to complete.
+            context: Optional structured input forwarded verbatim to agents that
+                declare ``accepts_invoke_context`` (e.g. DSL generation, which
+                reads ``index_name`` from it). Ordinary Strands agents ignore it.
 
         Returns:
             The agent's final response as a string.
@@ -285,12 +289,22 @@ class AgentOrchestrator:
             timeout=timeout,
         )
 
+        # Context-aware agents (e.g. DSL generation) opt in to receive the
+        # structured `context` and the forwarded bearer token. Ordinary Strands
+        # agents take only the prompt, so `context` never reaches them.
+        if getattr(agent, "accepts_invoke_context", False):
+            call = lambda: agent(prompt, context=context or {}, auth_token=token)  # noqa: E731
+        else:
+            call = lambda: agent(prompt)  # noqa: E731
+
         try:
             result = await asyncio.wait_for(
-                asyncio.to_thread(agent, prompt),
+                asyncio.to_thread(call),
                 timeout=timeout,
             )
-            return str(result) if result else ""
+            # Only a missing result is empty; falsey-but-valid values (0, False)
+            # are still stringified.
+            return str(result) if result is not None else ""
         except asyncio.TimeoutError:
             agent.cancel()
             raise TimeoutError(
