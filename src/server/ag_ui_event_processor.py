@@ -1,3 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# The OpenSearch Contributors require contributions made to
+# this file be licensed under the Apache-2.0 license or a
+# compatible open source license.
+
 """Event Processor for AG-UI Protocol.
 
 Handles event generation, persistence, and activity monitoring for AG-UI events.

@@ -1,3 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# The OpenSearch Contributors require contributions made to
+# this file be licensed under the Apache-2.0 license or a
+# compatible open source license.
+
 """Direct-DSL generation: the model authors the whole ``_search`` body.
 
 The default generation strategy. It gives the model the index mapping and one

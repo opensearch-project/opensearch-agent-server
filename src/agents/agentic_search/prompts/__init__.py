@@ -1,3 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# The OpenSearch Contributors require contributions made to
+# this file be licensed under the Apache-2.0 license or a
+# compatible open source license.
+
 """Prompts for the agentic-search agent, split by generation strategy.
 
 - :mod:`.direct_dsl` — rules, examples, ``EmitSearch`` schema, and cached system

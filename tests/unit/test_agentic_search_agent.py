@@ -1,3 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# The OpenSearch Contributors require contributions made to
+# this file be licensed under the Apache-2.0 license or a
+# compatible open source license.
+
 """Unit tests for the agentic_search agent (reached via POST /invoke).
 
 The OpenSearch client and the generation strategy are stubbed, so nothing hits a

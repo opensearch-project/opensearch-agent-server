@@ -1,3 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# The OpenSearch Contributors require contributions made to
+# this file be licensed under the Apache-2.0 license or a
+# compatible open source license.
+
 """Helper functions for create_run_route to reduce complexity.
 
 This module extracts cancellation handling and event stream management logic

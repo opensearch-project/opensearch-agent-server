@@ -1,3 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# The OpenSearch Contributors require contributions made to
+# this file be licensed under the Apache-2.0 license or a
+# compatible open source license.
+
 """The ``agentic_search`` agent: NLQ -> OpenSearch DSL, reached via ``POST /invoke``.
 
 Given a natural-language ``query`` and a target ``index_name`` (in the structured

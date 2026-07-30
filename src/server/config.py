@@ -1,3 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# The OpenSearch Contributors require contributions made to
+# this file be licensed under the Apache-2.0 license or a
+# compatible open source license.
+
 """Centralized AG-UI server configuration using Pydantic settings.
 
 This module provides centralized configuration management using Pydantic settings

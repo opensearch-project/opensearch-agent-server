@@ -1,3 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# The OpenSearch Contributors require contributions made to
+# this file be licensed under the Apache-2.0 license or a
+# compatible open source license.
+
 """Request ID middleware for AG-UI server.
 
 Assigns a unique request_id to each HTTP request, stores it in request.state and

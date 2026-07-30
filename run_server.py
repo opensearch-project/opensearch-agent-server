@@ -1,3 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# The OpenSearch Contributors require contributions made to
+# this file be licensed under the Apache-2.0 license or a
+# compatible open source license.
+
 """OpenSearch Agent Server — Entry Point.
 
 Run this server to expose the multi-agent orchestrator via AG-UI protocol.

@@ -1,3 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# The OpenSearch Contributors require contributions made to
+# this file be licensed under the Apache-2.0 license or a
+# compatible open source license.
+
 """Agent Registry for the OpenSearch Agent Server.
 
 Maps page contexts to agent factories. The orchestrator uses this registry
