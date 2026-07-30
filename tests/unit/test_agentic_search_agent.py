@@ -42,7 +42,9 @@ class _StubClient:
     """Stands in for the OpenSearch client; records the mapping fetch."""
 
     def __init__(self, mapping=None):
-        self._mapping = mapping if mapping is not None else {"products": {"mappings": {}}}
+        self._mapping = (
+            mapping if mapping is not None else {"products": {"mappings": {}}}
+        )
         self.fetched = []
 
     class _Indices:

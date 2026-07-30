@@ -305,7 +305,7 @@ class AgentOrchestrator:
             # Only a missing result is empty; falsey-but-valid values (0, False)
             # are still stringified.
             return str(result) if result is not None else ""
-        except asyncio.TimeoutError:
+        except TimeoutError:
             agent.cancel()
             raise TimeoutError(
                 f"Agent '{agent_name}' did not complete within {timeout}s."

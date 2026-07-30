@@ -30,7 +30,9 @@ class TestCreateModelBedrock:
     def _use_bedrock(self, monkeypatch):
         monkeypatch.delenv("OLLAMA_MODEL", raising=False)
         monkeypatch.setenv("BEDROCK_MODEL", "arn:aws:bedrock:us-east-1:123:model/test")
-        monkeypatch.setenv("BEDROCK_SMALL_MODEL", "arn:aws:bedrock:us-east-1:123:model/haiku")
+        monkeypatch.setenv(
+            "BEDROCK_SMALL_MODEL", "arn:aws:bedrock:us-east-1:123:model/haiku"
+        )
 
     @patch("strands.models.bedrock.BedrockModel.__init__", return_value=None)
     @patch("boto3.Session")
@@ -74,7 +76,9 @@ class TestCreateModelBedrockFallbacks:
 
     @patch("strands.models.bedrock.BedrockModel.__init__", return_value=None)
     @patch("boto3.Session")
-    def test_default_tier_falls_back_to_default_model_id(self, mock_session_cls, mock_init):
+    def test_default_tier_falls_back_to_default_model_id(
+        self, mock_session_cls, mock_init
+    ):
         """Default tier with no env vars uses _DEFAULT_BEDROCK_MODEL_ID."""
         mock_session = MagicMock()
         mock_session_cls.return_value = mock_session
@@ -89,9 +93,13 @@ class TestCreateModelBedrockFallbacks:
 
     @patch("strands.models.bedrock.BedrockModel.__init__", return_value=None)
     @patch("boto3.Session")
-    def test_small_tier_falls_back_to_bedrock_model(self, mock_session_cls, mock_init, monkeypatch):
+    def test_small_tier_falls_back_to_bedrock_model(
+        self, mock_session_cls, mock_init, monkeypatch
+    ):
         """Small tier with only BEDROCK_MODEL set falls back to it."""
-        monkeypatch.setenv("BEDROCK_MODEL", "arn:aws:bedrock:us-east-1:123:model/sonnet")
+        monkeypatch.setenv(
+            "BEDROCK_MODEL", "arn:aws:bedrock:us-east-1:123:model/sonnet"
+        )
         mock_session = MagicMock()
         mock_session_cls.return_value = mock_session
 
@@ -105,7 +113,9 @@ class TestCreateModelBedrockFallbacks:
 
     @patch("strands.models.bedrock.BedrockModel.__init__", return_value=None)
     @patch("boto3.Session")
-    def test_small_tier_falls_back_to_default_model_id(self, mock_session_cls, mock_init):
+    def test_small_tier_falls_back_to_default_model_id(
+        self, mock_session_cls, mock_init
+    ):
         """Small tier with neither env var set uses _DEFAULT_BEDROCK_MODEL_ID."""
         mock_session = MagicMock()
         mock_session_cls.return_value = mock_session
@@ -120,9 +130,14 @@ class TestCreateModelBedrockFallbacks:
 
     @patch("strands.models.bedrock.BedrockModel.__init__", return_value=None)
     @patch("boto3.Session")
-    def test_default_tier_falls_back_to_legacy_env_var(self, mock_session_cls, mock_init, monkeypatch):
+    def test_default_tier_falls_back_to_legacy_env_var(
+        self, mock_session_cls, mock_init, monkeypatch
+    ):
         """Default tier with legacy BEDROCK_INFERENCE_PROFILE_ARN still works."""
-        monkeypatch.setenv("BEDROCK_INFERENCE_PROFILE_ARN", "arn:aws:bedrock:us-east-1:123:inference-profile/my-profile")
+        monkeypatch.setenv(
+            "BEDROCK_INFERENCE_PROFILE_ARN",
+            "arn:aws:bedrock:us-east-1:123:inference-profile/my-profile",
+        )
         mock_session = MagicMock()
         mock_session_cls.return_value = mock_session
 
@@ -136,9 +151,14 @@ class TestCreateModelBedrockFallbacks:
 
     @patch("strands.models.bedrock.BedrockModel.__init__", return_value=None)
     @patch("boto3.Session")
-    def test_small_tier_falls_back_to_legacy_haiku_env_var(self, mock_session_cls, mock_init, monkeypatch):
+    def test_small_tier_falls_back_to_legacy_haiku_env_var(
+        self, mock_session_cls, mock_init, monkeypatch
+    ):
         """Small tier with legacy BEDROCK_HAIKU_INFERENCE_PROFILE_ARN still works."""
-        monkeypatch.setenv("BEDROCK_HAIKU_INFERENCE_PROFILE_ARN", "arn:aws:bedrock:us-east-1:123:inference-profile/haiku")
+        monkeypatch.setenv(
+            "BEDROCK_HAIKU_INFERENCE_PROFILE_ARN",
+            "arn:aws:bedrock:us-east-1:123:inference-profile/haiku",
+        )
         mock_session = MagicMock()
         mock_session_cls.return_value = mock_session
 

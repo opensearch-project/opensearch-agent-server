@@ -322,21 +322,29 @@ def create_app(config_override: ServerConfig | None = None) -> FastAPI:
         opensearch_url = config_resolved.opensearch_url
 
         # Register ART agent (search relevance page)
-        registry.register(AgentRegistration(
-            name="art",
-            description="Search Relevance Tuning agent (ART) — hypothesis generation, "
-            "evaluation, and UBI analysis.",
-            page_contexts=["search_overview", "search-relevance", "searchRelevance"],
-            is_default=False,
-        ))
+        registry.register(
+            AgentRegistration(
+                name="art",
+                description="Search Relevance Tuning agent (ART) — hypothesis generation, "
+                "evaluation, and UBI analysis.",
+                page_contexts=[
+                    "search_overview",
+                    "search-relevance",
+                    "searchRelevance",
+                ],
+                is_default=False,
+            )
+        )
 
         # Register default agent (handles all unmatched page contexts)
-        registry.register(AgentRegistration(
-            name="default",
-            description="General OpenSearch assistant with MCP tools",
-            page_contexts=[],
-            is_default=True,
-        ))
+        registry.register(
+            AgentRegistration(
+                name="default",
+                description="General OpenSearch assistant with MCP tools",
+                page_contexts=[],
+                is_default=True,
+            )
+        )
 
         log_info_event(
             logger,
@@ -365,7 +373,9 @@ def create_app(config_override: ServerConfig | None = None) -> FastAPI:
                 context_text = "\n".join(
                     f"{ctx.description}: {ctx.value}" for ctx in input_data.context
                 )
-                return f"{user_message}\n\n## Context from the application\n{context_text}"
+                return (
+                    f"{user_message}\n\n## Context from the application\n{context_text}"
+                )
             return user_message
 
         context_config = StrandsAgentConfig(state_context_builder=_page_context_builder)
@@ -656,6 +666,7 @@ async def cancel_run(run_id: str, request: Request) -> CancelRunResponse:
         persistence=persistence, run_id=run_id, request=request
     )
 
+
 @app.post("/invoke", tags=["invoke"])
 @rate_limit
 async def invoke(
@@ -667,6 +678,7 @@ async def invoke(
     Runs the agent to completion and returns the final response as JSON.
     Accepts a string query or message list (Strands Agent interface).
     """
+
     def _bad_request(message: str) -> JSONResponse:
         return JSONResponse(
             status_code=400,
@@ -703,7 +715,8 @@ async def invoke(
 
     if messages:
         if not isinstance(messages, list) or not all(
-            isinstance(m, dict) and isinstance(m.get("role"), str)
+            isinstance(m, dict)
+            and isinstance(m.get("role"), str)
             and isinstance(m.get("content"), str)
             for m in messages
         ):
@@ -711,8 +724,7 @@ async def invoke(
                 "'messages' must be a list of {role: str, content: str} objects."
             )
         prompt: str | list[dict] = [
-            {"role": m["role"], "content": [{"text": m["content"]}]}
-            for m in messages
+            {"role": m["role"], "content": [{"text": m["content"]}]} for m in messages
         ]
     elif not isinstance(query, str):
         return _bad_request("'query' must be a string.")

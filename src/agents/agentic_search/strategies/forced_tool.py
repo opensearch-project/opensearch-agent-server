@@ -67,7 +67,11 @@ def forced_tool_fill(
         ValueError: The forced tool produced no input, or the input failed
             validation against ``schema_model``.
     """
-    spec = tool_spec if tool_spec is not None else convert_pydantic_to_tool_spec(schema_model)
+    spec = (
+        tool_spec
+        if tool_spec is not None
+        else convert_pydantic_to_tool_spec(schema_model)
+    )
     tool_name = spec["name"]
 
     client = model.client  # botocore bedrock-runtime client (pooled connection)

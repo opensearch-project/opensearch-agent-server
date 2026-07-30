@@ -45,7 +45,9 @@ class TestMonitoredToolGracefulDegradation:
     """Tests for graceful degradation when the AG-UI emitter is unavailable."""
 
     @pytest.mark.asyncio
-    async def test_async_tool_executes_without_monitoring_when_emitter_returns_none(self):
+    async def test_async_tool_executes_without_monitoring_when_emitter_returns_none(
+        self,
+    ):
         """Tool runs and returns result when get_ag_ui_emitter returns None."""
         with patch(_AG_UI_PATCH, return_value=None):
 

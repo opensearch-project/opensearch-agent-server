@@ -10,7 +10,7 @@ Tests verify that the per-request agent creation fix:
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -63,6 +63,7 @@ class TestCredentialIsolation:
     ):
         """Each concurrent request must create its own agent instance."""
         with patch("server.agent_orchestrator.AGUIStrandsAgent") as mock_agui:
+
             async def fake_run(data):
                 await asyncio.sleep(0.05)
                 yield MagicMock(type=MagicMock(value="RUN_FINISHED"))
@@ -92,11 +93,10 @@ class TestCredentialIsolation:
         assert len(orchestrator._agents_created) == 2
 
     @pytest.mark.asyncio
-    async def test_each_request_gets_its_own_token(
-        self, orchestrator, mock_input_data
-    ):
+    async def test_each_request_gets_its_own_token(self, orchestrator, mock_input_data):
         """Each agent instance gets the correct token, not a shared one."""
         with patch("server.agent_orchestrator.AGUIStrandsAgent") as mock_agui:
+
             async def fake_run(data):
                 yield MagicMock(type=MagicMock(value="RUN_FINISHED"))
 
@@ -130,6 +130,7 @@ class TestCredentialIsolation:
     ):
         """Each request must have a different OboAuth instance."""
         with patch("server.agent_orchestrator.AGUIStrandsAgent") as mock_agui:
+
             async def fake_run(data):
                 yield MagicMock(type=MagicMock(value="RUN_FINISHED"))
 
@@ -163,6 +164,7 @@ class TestMcpClientCleanup:
     ):
         """MCP client must be stopped after a successful request."""
         with patch("server.agent_orchestrator.AGUIStrandsAgent") as mock_agui:
+
             async def fake_run(data):
                 yield MagicMock(type=MagicMock(value="RUN_FINISHED"))
 
@@ -177,11 +179,10 @@ class TestMcpClientCleanup:
         agent._mcp_client.stop.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_mcp_client_stopped_on_error(
-        self, orchestrator, mock_input_data
-    ):
+    async def test_mcp_client_stopped_on_error(self, orchestrator, mock_input_data):
         """MCP client must be stopped even if the agent run raises."""
         with patch("server.agent_orchestrator.AGUIStrandsAgent") as mock_agui:
+
             async def failing_run(data):
                 raise RuntimeError("agent exploded")
                 yield  # noqa: unreachable — makes this an async generator
@@ -203,6 +204,7 @@ class TestMcpClientCleanup:
     ):
         """If mcp_client.stop() raises, it should be suppressed."""
         with patch("server.agent_orchestrator.AGUIStrandsAgent") as mock_agui:
+
             async def fake_run(data):
                 yield MagicMock(type=MagicMock(value="RUN_FINISHED"))
 
@@ -222,11 +224,10 @@ class TestMcpClientCleanup:
         # Verify the run completed without error (stop exception suppressed)
 
     @pytest.mark.asyncio
-    async def test_no_mcp_client_does_not_error(
-        self, orchestrator, mock_input_data
-    ):
+    async def test_no_mcp_client_does_not_error(self, orchestrator, mock_input_data):
         """Agent without _mcp_client attribute should not error on cleanup."""
         with patch("server.agent_orchestrator.AGUIStrandsAgent") as mock_agui:
+
             async def fake_run(data):
                 yield MagicMock(type=MagicMock(value="RUN_FINISHED"))
 
@@ -253,11 +254,10 @@ class TestPerRequestAgentCreation:
     """Tests that agents are never cached/shared."""
 
     @pytest.mark.asyncio
-    async def test_factory_called_every_request(
-        self, orchestrator, mock_input_data
-    ):
+    async def test_factory_called_every_request(self, orchestrator, mock_input_data):
         """Factory must be called on every request, not cached."""
         with patch("server.agent_orchestrator.AGUIStrandsAgent") as mock_agui:
+
             async def fake_run(data):
                 yield MagicMock(type=MagicMock(value="RUN_FINISHED"))
 
@@ -281,10 +281,9 @@ class TestInvokeCredentialIsolation:
     """Tests that concurrent /invoke requests get isolated credentials."""
 
     @pytest.mark.asyncio
-    async def test_concurrent_invoke_requests_get_separate_agents(
-        self, orchestrator
-    ):
+    async def test_concurrent_invoke_requests_get_separate_agents(self, orchestrator):
         """Each concurrent invoke request must create its own agent instance."""
+
         async def run_invoke(token):
             return await orchestrator.invoke(
                 prompt="hello",
@@ -322,12 +321,8 @@ class TestInvokeCredentialIsolation:
     @pytest.mark.asyncio
     async def test_invoke_no_shared_obo_auth(self, orchestrator):
         """Each invoke request must have a different OboAuth instance."""
-        await orchestrator.invoke(
-            prompt="hello", agent_name="default", headers=None
-        )
-        await orchestrator.invoke(
-            prompt="hello", agent_name="default", headers=None
-        )
+        await orchestrator.invoke(prompt="hello", agent_name="default", headers=None)
+        await orchestrator.invoke(prompt="hello", agent_name="default", headers=None)
 
         agent_1 = orchestrator._agents_created[0]
         agent_2 = orchestrator._agents_created[1]
@@ -340,9 +335,7 @@ class TestInvokeMcpClientCleanup:
     @pytest.mark.asyncio
     async def test_invoke_mcp_client_stopped_after_success(self, orchestrator):
         """MCP client must be stopped after a successful invoke."""
-        await orchestrator.invoke(
-            prompt="hello", agent_name="default", headers=None
-        )
+        await orchestrator.invoke(prompt="hello", agent_name="default", headers=None)
 
         agent = orchestrator._agents_created[0]
         agent._mcp_client.stop.assert_called_once()
@@ -350,6 +343,7 @@ class TestInvokeMcpClientCleanup:
     @pytest.mark.asyncio
     async def test_invoke_mcp_client_stopped_on_error(self, orchestrator):
         """MCP client must be stopped even if invoke raises."""
+
         # Make the agent call raise
         def failing_agent(prompt):
             raise RuntimeError("agent exploded")
@@ -384,9 +378,7 @@ class TestInvokeMcpClientCleanup:
         orchestrator._agent_factories["default"]["factory"] = factory_no_mcp
 
         # Should not raise
-        await orchestrator.invoke(
-            prompt="hello", agent_name="default", headers=None
-        )
+        await orchestrator.invoke(prompt="hello", agent_name="default", headers=None)
 
     @pytest.mark.asyncio
     async def test_invoke_factory_called_every_request(self, orchestrator):

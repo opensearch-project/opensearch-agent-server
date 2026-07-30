@@ -59,7 +59,9 @@ def _fetch_sample_document(client: Any, index_name: str) -> str:
         }
         return json.dumps(truncated)
     except Exception:  # noqa: BLE001 - best-effort; proceed without a sample
-        logger.warning("Sample document fetch failed for index=%s; proceeding without", index_name)
+        logger.warning(
+            "Sample document fetch failed for index=%s; proceeding without", index_name
+        )
         return ""
 
 

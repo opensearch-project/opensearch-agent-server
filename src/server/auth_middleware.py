@@ -53,7 +53,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
-from enum import Enum
+from enum import StrEnum
 from typing import TypedDict
 
 import jwt
@@ -69,14 +69,14 @@ from utils.logging_helpers import get_logger, log_info_event, log_warning_event
 logger = get_logger(__name__)
 
 
-class AuthMode(str, Enum):
+class AuthMode(StrEnum):
     """Authentication mode enumeration."""
 
     STRICT = "strict"
     PERMISSIVE = "permissive"
 
 
-class AuthStrategy(str, Enum):
+class AuthStrategy(StrEnum):
     """Authentication strategy enumeration."""
 
     HEADER = "header"

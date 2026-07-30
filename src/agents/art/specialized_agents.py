@@ -18,17 +18,19 @@ from agents.context_management import (
 from utils.logging_helpers import get_logger, log_info_event
 from utils.model_factory import create_model
 from utils.monitored_tool import monitored_tool
+
 # Import experimentation tools. This agent is meant to do only sanity checks,
 # so we don't need all experiment tools.
 # We need to adjust the path here to make tools available,
 # otherwise not found.
 _src_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../src")
-import sys
+import sys  # noqa: E402
+
 sys.path.insert(0, _src_dir)
-from tools.art.experiment_tools import (
+from tools.art.experiment_tools import (  # noqa: E402
     aggregate_experiment_results,
 )
-from tools.art.ubi_metrics_tools import compute_ubi_metrics
+from tools.art.ubi_metrics_tools import compute_ubi_metrics  # noqa: E402
 
 logger = get_logger(__name__)
 
@@ -256,7 +258,6 @@ not the raw ctr decimal.
 """
 
 
-
 # Global variable to store the authenticated MCPClient and its resolved tools.
 # Specialized agents use the resolved tools (not the MCPClient directly) to
 # avoid triggering a second start() on an already-running session.
@@ -299,7 +300,9 @@ async def hypothesis_agent(query: str) -> str:
         str: Hypothesis with reasoning and recommendations for solving the issue
     """
     if not _mcp_tools:
-        return "Error: MCP tools not configured. Please initialize MCP connection first."
+        return (
+            "Error: MCP tools not configured. Please initialize MCP connection first."
+        )
 
     try:
         # Use resolved tools (not MCPClient directly) to avoid calling
@@ -340,7 +343,9 @@ async def evaluation_agent(query: str) -> str:
         str: Evaluation results with metrics, analysis, and recommendations
     """
     if not _mcp_tools:
-        return "Error: MCP tools not configured. Please initialize MCP connection first."
+        return (
+            "Error: MCP tools not configured. Please initialize MCP connection first."
+        )
 
     try:
         # Use resolved tools (not MCPClient directly) to avoid calling
@@ -381,7 +386,9 @@ async def user_behavior_analysis_agent(query: str) -> str:
         str: Analysis results with metrics, patterns, and actionable insights
     """
     if not _mcp_tools:
-        return "Error: MCP tools not configured. Please initialize MCP connection first."
+        return (
+            "Error: MCP tools not configured. Please initialize MCP connection first."
+        )
 
     try:
         # Use resolved tools (not MCPClient directly) to avoid calling
