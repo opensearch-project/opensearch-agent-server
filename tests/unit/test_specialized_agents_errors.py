@@ -9,19 +9,18 @@ Tests error paths and edge cases for specialized agent operations including:
 - Missing tools initialization
 """
 
-import asyncio
 from collections.abc import Generator
 from contextlib import ExitStack
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
-from agents.art import specialized_agents
 from helpers.specialized_agents_helpers import (
     patch_evaluation_agent_dependencies,
     patch_hypothesis_agent_dependencies,
     patch_ubi_agent_dependencies,
 )
+
+from agents.art import specialized_agents
 
 pytestmark = pytest.mark.unit
 
@@ -87,7 +86,7 @@ class TestSpecializedAgentsErrors:
         mock_agent = MagicMock()
         # Simulate timeout during agent invocation
         mock_agent.invoke_async = AsyncMock(
-            side_effect=asyncio.TimeoutError(
+            side_effect=TimeoutError(
                 "Agent execution timed out after 30 minutes"
             )
         )

@@ -342,7 +342,7 @@ def require_authenticated_if_auth_enabled(request: Request | None) -> None:
     raise UnauthorizedError("Authentication required")
 
 
-async def safe_persistence_operation_async(
+async def safe_persistence_operation_async[T](
     operation_name: str, operation_func: Callable[..., T], *args: Any, **kwargs: Any
 ) -> T | None:
     """Safely execute a persistence write operation with retry logic for transient errors.
@@ -446,7 +446,7 @@ async def safe_persistence_operation_async(
         return None
 
 
-def safe_persistence_operation(
+def safe_persistence_operation[T](
     operation_name: str, operation_func: Callable[..., T], *args: Any, **kwargs: Any
 ) -> T | None:
     """Safely execute a persistence write operation with error handling.
@@ -527,7 +527,7 @@ def safe_persistence_operation(
         return None
 
 
-def handle_persistence_read_operation(
+def handle_persistence_read_operation[T](
     operation_name: str,
     operation_func: Callable[..., T],
     error_event_name: str,

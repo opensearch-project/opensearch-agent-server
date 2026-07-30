@@ -26,7 +26,7 @@ if sys.path[0] != _src_dir:
 # Load environment variables FIRST, before any server imports that read config.
 # ag_ui_app.py calls create_app() at module level, which creates ServerConfig()
 # from env vars. If load_dotenv() runs after that import, .env values are missed.
-from dotenv import load_dotenv
+from dotenv import load_dotenv  # noqa: E402
 
 load_dotenv()
 
@@ -58,9 +58,9 @@ from server.logging_config import configure_logging, get_logging_config  # noqa:
 use_json, log_level = get_logging_config()
 configure_logging(use_json=use_json, log_level=log_level, force=True)
 
-from utils.logging_helpers import get_logger, log_info_event  # noqa: E402
 from server.ag_ui_app import app  # noqa: E402
 from server.config import get_config  # noqa: E402
+from utils.logging_helpers import get_logger, log_info_event  # noqa: E402
 
 logger = get_logger(__name__)
 

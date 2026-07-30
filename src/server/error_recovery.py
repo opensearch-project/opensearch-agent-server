@@ -45,7 +45,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, TypeVar
+from typing import Any
 
 from server.exceptions import NotFoundError, PersistenceNotEnabledError
 from utils.logging_helpers import (
@@ -55,9 +55,6 @@ from utils.logging_helpers import (
 )
 
 logger = get_logger(__name__)
-
-T = TypeVar("T")
-R = TypeVar("R")
 
 __all__ = [
     # Partial success
@@ -112,7 +109,7 @@ class PartialSuccessResult:
         return self.success_count / self.total
 
 
-def execute_with_partial_success(
+def execute_with_partial_success[T, R](
     items: list[T],
     operation: Callable[[T], R],
     operation_name: str = "batch_operation",
@@ -206,7 +203,7 @@ def execute_with_partial_success(
     return result
 
 
-async def execute_with_partial_success_async(
+async def execute_with_partial_success_async[T](
     items: list[T],
     operation: Callable[[T], Any],
     operation_name: str = "batch_operation",
@@ -289,7 +286,7 @@ async def execute_with_partial_success_async(
     return result
 
 
-def execute_with_fallback(
+def execute_with_fallback[T](
     operation: Callable[[], T],
     fallback: Callable[[], T],
     operation_name: str | None = None,
@@ -543,7 +540,7 @@ def create_fallback_events_response(
     }
 
 
-def handle_read_operation_with_fallback(
+def handle_read_operation_with_fallback[T](
     operation_name: str,
     operation_func: Callable[..., T],
     fallback_func: Callable[[], T],

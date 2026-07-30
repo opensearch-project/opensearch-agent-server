@@ -34,7 +34,7 @@ Usage::
 from __future__ import annotations
 
 import threading
-from typing import Generator
+from collections.abc import Generator
 
 import httpx
 

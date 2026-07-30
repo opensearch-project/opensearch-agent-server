@@ -14,17 +14,19 @@ from strands.tools.mcp import MCPClient
 from utils.logging_helpers import get_logger, log_info_event
 from utils.model_factory import create_model
 from utils.monitored_tool import monitored_tool
+
 # Import experimentation tools. This agent is meant to do only sanity checks,
 # so we don't need all experiment tools.
 # We need to adjust the path here to make tools available,
 # otherwise not found.
 _src_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../src")
-import sys
+import sys  # noqa: E402
+
 sys.path.insert(0, _src_dir)
-from tools.art.experiment_tools import (
+from tools.art.experiment_tools import (  # noqa: E402
     aggregate_experiment_results,
 )
-from tools.art.ubi_metrics_tools import compute_ubi_metrics
+from tools.art.ubi_metrics_tools import compute_ubi_metrics  # noqa: E402
 
 logger = get_logger(__name__)
 
