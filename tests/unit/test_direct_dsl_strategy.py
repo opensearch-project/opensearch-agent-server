@@ -21,7 +21,9 @@ class _BedrockLikeModel:
     """Has a ``client`` exposing ``converse_stream`` (the forced-tool capability)."""
 
     class _Client:
-        def converse_stream(self, **kwargs):  # pragma: no cover - never called (stubbed)
+        def converse_stream(
+            self, **kwargs
+        ):  # pragma: no cover - never called (stubbed)
             raise AssertionError("real converse_stream should be stubbed out")
 
     client = _Client()

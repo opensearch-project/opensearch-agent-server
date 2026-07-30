@@ -254,7 +254,6 @@ not the raw ctr decimal.
 """
 
 
-
 # Global variable to store the authenticated MCPClient and its resolved tools.
 # Specialized agents use the resolved tools (not the MCPClient directly) to
 # avoid triggering a second start() on an already-running session.
@@ -297,7 +296,9 @@ async def hypothesis_agent(query: str) -> str:
         str: Hypothesis with reasoning and recommendations for solving the issue
     """
     if not _mcp_tools:
-        return "Error: MCP tools not configured. Please initialize MCP connection first."
+        return (
+            "Error: MCP tools not configured. Please initialize MCP connection first."
+        )
 
     try:
         # Use resolved tools (not MCPClient directly) to avoid calling
@@ -336,7 +337,9 @@ async def evaluation_agent(query: str) -> str:
         str: Evaluation results with metrics, analysis, and recommendations
     """
     if not _mcp_tools:
-        return "Error: MCP tools not configured. Please initialize MCP connection first."
+        return (
+            "Error: MCP tools not configured. Please initialize MCP connection first."
+        )
 
     try:
         # Use resolved tools (not MCPClient directly) to avoid calling
@@ -375,7 +378,9 @@ async def user_behavior_analysis_agent(query: str) -> str:
         str: Analysis results with metrics, patterns, and actionable insights
     """
     if not _mcp_tools:
-        return "Error: MCP tools not configured. Please initialize MCP connection first."
+        return (
+            "Error: MCP tools not configured. Please initialize MCP connection first."
+        )
 
     try:
         # Use resolved tools (not MCPClient directly) to avoid calling

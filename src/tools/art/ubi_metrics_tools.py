@@ -25,7 +25,9 @@ def _parse_buckets(raw: str, label: str) -> list[dict[str, Any]]:
     except json.JSONDecodeError as exc:
         raise ValueError(f"Invalid JSON for {label}: {exc}") from exc
     if not isinstance(data, list):
-        raise ValueError(f"{label} must be a JSON array of bucket objects, got {type(data).__name__}")
+        raise ValueError(
+            f"{label} must be a JSON array of bucket objects, got {type(data).__name__}"
+        )
     return data
 
 
@@ -117,7 +119,9 @@ def compute_ubi_metrics(
     if impression_buckets is not None and click_query_id_buckets is not None:
         try:
             imp_buckets = _parse_buckets(impression_buckets, "impression_buckets")
-            clk_buckets = _parse_buckets(click_query_id_buckets, "click_query_id_buckets")
+            clk_buckets = _parse_buckets(
+                click_query_id_buckets, "click_query_id_buckets"
+            )
         except ValueError as exc:
             return json.dumps({"error": str(exc)})
 
@@ -143,7 +147,9 @@ def compute_ubi_metrics(
             if not query_text:
                 skipped += 1
                 continue
-            clicks_by_query[query_text] = clicks_by_query.get(query_text, 0) + click_count
+            clicks_by_query[query_text] = (
+                clicks_by_query.get(query_text, 0) + click_count
+            )
 
         if skipped:
             results["skipped_click_buckets"] = skipped
@@ -159,13 +165,15 @@ def compute_ubi_metrics(
             impressions = impressions_by_query.get(qt, 0)
             clicks = clicks_by_query.get(qt, 0)
             ctr = clicks / impressions if impressions > 0 else 0.0
-            per_query.append({
-                "query": qt,
-                "impressions": impressions,
-                "clicks": clicks,
-                "ctr": round(ctr, 4),
-                "ctr_pct": f"{ctr * 100:.2f}%",
-            })
+            per_query.append(
+                {
+                    "query": qt,
+                    "impressions": impressions,
+                    "clicks": clicks,
+                    "ctr": round(ctr, 4),
+                    "ctr_pct": f"{ctr * 100:.2f}%",
+                }
+            )
 
         per_query.sort(key=lambda x: x["ctr"], reverse=True)
         results["per_query_count"] = len(per_query)

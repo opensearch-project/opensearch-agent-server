@@ -244,8 +244,6 @@ class TestUserBehaviorAnalysisAgent:
             assert "Rate limit" in result or "429" in result
 
 
-
-
 @pytest.mark.integration
 class TestSpecializedAgentsErrorHandling:
     """Additional error handling tests for specialized agents."""
@@ -286,9 +284,7 @@ class TestSpecializedAgentsErrorHandling:
         mock_agent = MagicMock()
         # Simulate timeout during agent invocation
         mock_agent.invoke_async = AsyncMock(
-            side_effect=TimeoutError(
-                "Agent execution timed out after 30 minutes"
-            )
+            side_effect=TimeoutError("Agent execution timed out after 30 minutes")
         )
 
         with patch_evaluation_agent_dependencies(mock_agent):
@@ -300,7 +296,6 @@ class TestSpecializedAgentsErrorHandling:
             assert "Error in evaluation" in result
             assert "timed out" in result.lower() or "timeout" in result.lower()
             mock_agent.invoke_async.assert_called_once()
-
 
     @pytest.mark.asyncio
     async def test_user_behavior_agent_missing_data(self):

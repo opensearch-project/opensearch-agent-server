@@ -14,9 +14,7 @@ os.environ["OPENSEARCH_URL"] = os.getenv("OPENSEARCH_URL", "http://localhost:920
 
 # Mock AWS credentials for tests (real calls are patched out in unit tests)
 os.environ["AWS_ACCESS_KEY_ID"] = os.getenv("AWS_ACCESS_KEY_ID", "test-key")
-os.environ["AWS_SECRET_ACCESS_KEY"] = os.getenv(
-    "AWS_SECRET_ACCESS_KEY", "test-secret"
-)
+os.environ["AWS_SECRET_ACCESS_KEY"] = os.getenv("AWS_SECRET_ACCESS_KEY", "test-secret")
 os.environ["AWS_REGION"] = os.getenv("AWS_REGION", "us-east-1")
 
 
@@ -49,5 +47,3 @@ def patch_env(monkeypatch: pytest.MonkeyPatch) -> Callable[..., dict[str, str]]:
 def test_opensearch_url() -> str:
     """Returns the test OpenSearch URL (TEST_OPENSEARCH_URL env var, default localhost:9200)."""
     return os.getenv("TEST_OPENSEARCH_URL", "http://localhost:9200")
-
-

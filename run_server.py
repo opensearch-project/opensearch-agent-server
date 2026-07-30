@@ -43,7 +43,11 @@ if get_provider() == "bedrock" and not os.getenv("AWS_ACCESS_KEY_ID"):
         _cp.read(_cred_file)
         _profile = os.getenv("AWS_PROFILE", "default")
         if _cp.has_section(_profile):
-            for key in ("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN"):
+            for key in (
+                "AWS_ACCESS_KEY_ID",
+                "AWS_SECRET_ACCESS_KEY",
+                "AWS_SESSION_TOKEN",
+            ):
                 val = _cp.get(_profile, key, fallback=None) or _cp.get(
                     _profile, key.lower(), fallback=None
                 )

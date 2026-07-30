@@ -67,7 +67,9 @@ class TestBundledOnly:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """If bundled path returns None, loader returns []."""
-        monkeypatch.setattr("agents.skill_loader._bundled_skills_resource", lambda: None)
+        monkeypatch.setattr(
+            "agents.skill_loader._bundled_skills_resource", lambda: None
+        )
         _set_fake_home(monkeypatch, tmp_path / "scratch-home")
         monkeypatch.delenv(_ENV_VAR, raising=False)
 
@@ -84,7 +86,9 @@ class TestBundledOnly:
         """When _bundled_skills_resource() returns None, it contributes no path
         to search — so we should NOT see a path_missing event for it, and
         the loader should simply return []."""
-        monkeypatch.setattr("agents.skill_loader._bundled_skills_resource", lambda: None)
+        monkeypatch.setattr(
+            "agents.skill_loader._bundled_skills_resource", lambda: None
+        )
         _set_fake_home(monkeypatch, tmp_path / "scratch-home")
         monkeypatch.delenv(_ENV_VAR, raising=False)
 

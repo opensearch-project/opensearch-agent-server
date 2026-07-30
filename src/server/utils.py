@@ -666,5 +666,3 @@ def parse_json_with_fallback(
                 exc_info=True,
             )
             return fallback_value if fallback_value is not None else text_content
-
-

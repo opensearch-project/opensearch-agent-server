@@ -73,9 +73,7 @@ class TestInvokeEndpoint:
 
     def test_explicit_agent_name(self, client, mock_orchestrator):
         """Agent name from request body is passed to orchestrator."""
-        response = client.post(
-            "/invoke", json={"query": "hi", "agent": "decomposer"}
-        )
+        response = client.post("/invoke", json={"query": "hi", "agent": "decomposer"})
 
         assert response.status_code == 200
         mock_orchestrator.invoke.assert_called_once_with(
@@ -105,9 +103,7 @@ class TestInvokeEndpoint:
             )
         )
 
-        response = client.post(
-            "/invoke", json={"query": "hi", "agent": "bad"}
-        )
+        response = client.post("/invoke", json={"query": "hi", "agent": "bad"})
 
         assert response.status_code == 500
         body = response.json()
@@ -117,9 +113,7 @@ class TestInvokeEndpoint:
 
     def test_error_response_has_no_traceback(self, client, mock_orchestrator):
         """Error responses must not leak tracebacks."""
-        mock_orchestrator.invoke = AsyncMock(
-            side_effect=ValueError("something broke")
-        )
+        mock_orchestrator.invoke = AsyncMock(side_effect=ValueError("something broke"))
 
         response = client.post("/invoke", json={"query": "hi"})
 
@@ -169,9 +163,7 @@ class TestInvokeEndpoint:
 
     def test_custom_timeout_passed_to_orchestrator(self, client, mock_orchestrator):
         """Custom timeout value from request body is passed to orchestrator."""
-        response = client.post(
-            "/invoke", json={"query": "hi", "timeout": 300}
-        )
+        response = client.post("/invoke", json={"query": "hi", "timeout": 300})
 
         assert response.status_code == 200
         mock_orchestrator.invoke.assert_called_once_with(

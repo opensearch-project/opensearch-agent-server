@@ -19,7 +19,9 @@ from src.tools.art.experiment_tools import (
 pytestmark = pytest.mark.unit
 
 
-def _pairwise_experiment(experiment_id="exp1", status="COMPLETED", results=None, search_config_list=None):
+def _pairwise_experiment(
+    experiment_id="exp1", status="COMPLETED", results=None, search_config_list=None
+):
     """Build a minimal pairwise experiment document."""
     doc = {
         "id": experiment_id,
@@ -79,7 +81,9 @@ class TestAggregateExperimentResults:
     @pytest.mark.asyncio
     async def test_error_status(self):
         """Returns error details when experiment status is ERROR."""
-        result = await aggregate_experiment_results(_pairwise_experiment(status="ERROR"))
+        result = await aggregate_experiment_results(
+            _pairwise_experiment(status="ERROR")
+        )
         result_data = json.loads(result)
         assert result_data["status"] == "ERROR"
         assert "error_message" in result_data
@@ -88,7 +92,9 @@ class TestAggregateExperimentResults:
     @pytest.mark.asyncio
     async def test_pending_status(self):
         """Returns in-progress message for PENDING status."""
-        result = await aggregate_experiment_results(_pairwise_experiment(status="PENDING"))
+        result = await aggregate_experiment_results(
+            _pairwise_experiment(status="PENDING")
+        )
         result_data = json.loads(result)
         assert result_data["status"] == "PENDING"
         assert "still pending" in result_data["message"].lower()
@@ -96,7 +102,9 @@ class TestAggregateExperimentResults:
     @pytest.mark.asyncio
     async def test_running_status(self):
         """Returns in-progress message for RUNNING status."""
-        result = await aggregate_experiment_results(_pairwise_experiment(status="RUNNING"))
+        result = await aggregate_experiment_results(
+            _pairwise_experiment(status="RUNNING")
+        )
         result_data = json.loads(result)
         assert result_data["status"] == "RUNNING"
         assert "message" in result_data
@@ -104,7 +112,9 @@ class TestAggregateExperimentResults:
     @pytest.mark.asyncio
     async def test_unknown_status(self):
         """Returns not-available message for unrecognised status."""
-        result = await aggregate_experiment_results(_pairwise_experiment(status="CANCELLED"))
+        result = await aggregate_experiment_results(
+            _pairwise_experiment(status="CANCELLED")
+        )
         result_data = json.loads(result)
         assert result_data["status"] == "CANCELLED"
         assert "Results not available" in result_data["message"]
@@ -157,7 +167,9 @@ class TestAggregateExperimentResults:
                 ],
             },
         ]
-        result = await aggregate_experiment_results(_pairwise_experiment(results=results))
+        result = await aggregate_experiment_results(
+            _pairwise_experiment(results=results)
+        )
         result_data = json.loads(result)
 
         assert result_data["experiment_id"] == "exp1"
@@ -191,7 +203,9 @@ class TestAggregateExperimentResults:
                 "snapshots": [],
             }
         ]
-        result = await aggregate_experiment_results(_pairwise_experiment(results=results))
+        result = await aggregate_experiment_results(
+            _pairwise_experiment(results=results)
+        )
         result_data = json.loads(result)
         assert result_data["total_queries"] == 1
         assert "rbo50" in result_data["aggregate_metrics"]
@@ -201,7 +215,9 @@ class TestAggregateExperimentResults:
     async def test_pairwise_empty_metrics_list(self):
         """Empty metrics list produces no aggregate_metrics."""
         results = [{"query_text": "test", "metrics": [], "snapshots": []}]
-        result = await aggregate_experiment_results(_pairwise_experiment(results=results))
+        result = await aggregate_experiment_results(
+            _pairwise_experiment(results=results)
+        )
         result_data = json.loads(result)
         assert result_data["aggregate_metrics"] == {}
         assert result_data["primary_metric"] is None
@@ -214,14 +230,16 @@ class TestAggregateExperimentResults:
                 "query_text": "test",
                 "metrics": [
                     {"metric": "jaccard", "value": 0.8},
-                    {"metric": "rbo50"},           # missing value → None, skipped for agg
-                    {"value": 0.5},                # missing name → skipped entirely
-                    {},                            # empty → skipped
+                    {"metric": "rbo50"},  # missing value → None, skipped for agg
+                    {"value": 0.5},  # missing name → skipped entirely
+                    {},  # empty → skipped
                 ],
                 "snapshots": [],
             }
         ]
-        result = await aggregate_experiment_results(_pairwise_experiment(results=results))
+        result = await aggregate_experiment_results(
+            _pairwise_experiment(results=results)
+        )
         result_data = json.loads(result)
         assert result_data["total_queries"] == 1
         assert "jaccard" in result_data["aggregate_metrics"]
@@ -231,15 +249,21 @@ class TestAggregateExperimentResults:
     async def test_pairwise_missing_query_text(self):
         """Missing query_text defaults to empty string."""
         results = [{"metrics": [{"metric": "jaccard", "value": 0.8}], "snapshots": []}]
-        result = await aggregate_experiment_results(_pairwise_experiment(results=results))
+        result = await aggregate_experiment_results(
+            _pairwise_experiment(results=results)
+        )
         result_data = json.loads(result)
         assert result_data["per_query_results"][0]["query_text"] == ""
 
     @pytest.mark.asyncio
     async def test_pairwise_missing_snapshots(self):
         """Missing snapshots field defaults to empty list."""
-        results = [{"query_text": "test", "metrics": [{"metric": "jaccard", "value": 0.8}]}]
-        result = await aggregate_experiment_results(_pairwise_experiment(results=results))
+        results = [
+            {"query_text": "test", "metrics": [{"metric": "jaccard", "value": 0.8}]}
+        ]
+        result = await aggregate_experiment_results(
+            _pairwise_experiment(results=results)
+        )
         result_data = json.loads(result)
         assert result_data["per_query_results"][0]["snapshots"] == []
 
@@ -247,9 +271,15 @@ class TestAggregateExperimentResults:
     async def test_pairwise_single_value_stdev_zero(self):
         """Single-query experiment reports std_dev of 0."""
         results = [
-            {"query_text": "test", "metrics": [{"metric": "jaccard", "value": 0.8}], "snapshots": []}
+            {
+                "query_text": "test",
+                "metrics": [{"metric": "jaccard", "value": 0.8}],
+                "snapshots": [],
+            }
         ]
-        result = await aggregate_experiment_results(_pairwise_experiment(results=results))
+        result = await aggregate_experiment_results(
+            _pairwise_experiment(results=results)
+        )
         result_data = json.loads(result)
         assert result_data["aggregate_metrics"]["jaccard"]["std_dev"] == 0
 
@@ -257,10 +287,20 @@ class TestAggregateExperimentResults:
     async def test_pairwise_negative_metric_values(self):
         """Negative metric values are handled in min/max correctly."""
         results = [
-            {"query_text": "t1", "metrics": [{"metric": "jaccard", "value": -0.5}], "snapshots": []},
-            {"query_text": "t2", "metrics": [{"metric": "jaccard", "value": 0.8}], "snapshots": []},
+            {
+                "query_text": "t1",
+                "metrics": [{"metric": "jaccard", "value": -0.5}],
+                "snapshots": [],
+            },
+            {
+                "query_text": "t2",
+                "metrics": [{"metric": "jaccard", "value": 0.8}],
+                "snapshots": [],
+            },
         ]
-        result = await aggregate_experiment_results(_pairwise_experiment(results=results))
+        result = await aggregate_experiment_results(
+            _pairwise_experiment(results=results)
+        )
         result_data = json.loads(result)
         assert result_data["aggregate_metrics"]["jaccard"]["min"] == -0.5
         assert result_data["aggregate_metrics"]["jaccard"]["max"] == 0.8
@@ -269,10 +309,16 @@ class TestAggregateExperimentResults:
     async def test_pairwise_all_same_values(self):
         """All-equal metrics produce zero std_dev and equal mean/median/min/max."""
         results = [
-            {"query_text": f"q{i}", "metrics": [{"metric": "jaccard", "value": 0.5}], "snapshots": []}
+            {
+                "query_text": f"q{i}",
+                "metrics": [{"metric": "jaccard", "value": 0.5}],
+                "snapshots": [],
+            }
             for i in range(3)
         ]
-        result = await aggregate_experiment_results(_pairwise_experiment(results=results))
+        result = await aggregate_experiment_results(
+            _pairwise_experiment(results=results)
+        )
         result_data = json.loads(result)
         agg = result_data["aggregate_metrics"]["jaccard"]
         assert agg["mean"] == agg["median"] == agg["min"] == agg["max"] == 0.5
@@ -289,13 +335,21 @@ class TestAggregateExperimentResults:
                     {"metric": "rbo50", "value": 0.4 + (i % 10) * 0.05},
                 ],
                 "snapshots": [
-                    {"searchConfigurationId": "config1", "docIds": [f"doc{j}" for j in range(10)]},
-                    {"searchConfigurationId": "config2", "docIds": [f"doc{j+10}" for j in range(10)]},
+                    {
+                        "searchConfigurationId": "config1",
+                        "docIds": [f"doc{j}" for j in range(10)],
+                    },
+                    {
+                        "searchConfigurationId": "config2",
+                        "docIds": [f"doc{j + 10}" for j in range(10)],
+                    },
                 ],
             }
             for i in range(500)
         ]
-        result = await aggregate_experiment_results(_pairwise_experiment(results=results))
+        result = await aggregate_experiment_results(
+            _pairwise_experiment(results=results)
+        )
         result_data = json.loads(result)
         assert result_data["total_queries"] == 500
         assert len(result_data["per_query_results"]) == 500
@@ -328,7 +382,9 @@ class TestAggregateExperimentResults:
         assert result_data["type"] == "POINTWISE_EVALUATION"
         assert result_data["total_queries"] == 2
         assert "NDCG@10" in result_data["aggregate_metrics"]
-        assert result_data["aggregate_metrics"]["NDCG@10"]["mean"] == round((0.85 + 0.70) / 2, 4)
+        assert result_data["aggregate_metrics"]["NDCG@10"]["mean"] == round(
+            (0.85 + 0.70) / 2, 4
+        )
 
     @pytest.mark.asyncio
     async def test_pointwise_empty_hits(self):
@@ -382,7 +438,14 @@ class TestAggregateExperimentResults:
     @pytest.mark.asyncio
     async def test_pointwise_empty_metrics_list(self):
         """Empty metrics list produces no aggregate_metrics."""
-        hits = [{"searchText": "test", "metrics": [], "documentIds": ["doc1"], "searchConfigurationId": "config1"}]
+        hits = [
+            {
+                "searchText": "test",
+                "metrics": [],
+                "documentIds": ["doc1"],
+                "searchConfigurationId": "config1",
+            }
+        ]
         result = await aggregate_experiment_results(
             _pointwise_experiment(), evaluation_results=_eval_results(hits)
         )
@@ -392,7 +455,13 @@ class TestAggregateExperimentResults:
     @pytest.mark.asyncio
     async def test_pointwise_missing_search_text(self):
         """Missing searchText defaults to empty string."""
-        hits = [{"metrics": [{"metric": "NDCG@10", "value": 0.8}], "documentIds": ["doc1"], "searchConfigurationId": "config1"}]
+        hits = [
+            {
+                "metrics": [{"metric": "NDCG@10", "value": 0.8}],
+                "documentIds": ["doc1"],
+                "searchConfigurationId": "config1",
+            }
+        ]
         result = await aggregate_experiment_results(
             _pointwise_experiment(), evaluation_results=_eval_results(hits)
         )
@@ -402,7 +471,13 @@ class TestAggregateExperimentResults:
     @pytest.mark.asyncio
     async def test_pointwise_missing_document_ids(self):
         """Missing documentIds defaults to empty list."""
-        hits = [{"searchText": "test", "metrics": [{"metric": "NDCG@10", "value": 0.8}], "searchConfigurationId": "config1"}]
+        hits = [
+            {
+                "searchText": "test",
+                "metrics": [{"metric": "NDCG@10", "value": 0.8}],
+                "searchConfigurationId": "config1",
+            }
+        ]
         result = await aggregate_experiment_results(
             _pointwise_experiment(), evaluation_results=_eval_results(hits)
         )
@@ -412,7 +487,13 @@ class TestAggregateExperimentResults:
     @pytest.mark.asyncio
     async def test_pointwise_missing_search_configuration_id(self):
         """Missing searchConfigurationId defaults to empty string."""
-        hits = [{"searchText": "test", "metrics": [{"metric": "NDCG@10", "value": 0.8}], "documentIds": ["doc1"]}]
+        hits = [
+            {
+                "searchText": "test",
+                "metrics": [{"metric": "NDCG@10", "value": 0.8}],
+                "documentIds": ["doc1"],
+            }
+        ]
         result = await aggregate_experiment_results(
             _pointwise_experiment(), evaluation_results=_eval_results(hits)
         )
@@ -422,7 +503,14 @@ class TestAggregateExperimentResults:
     @pytest.mark.asyncio
     async def test_pointwise_fallback_primary_metric(self):
         """Falls back to first available metric when NDCG@10 is absent."""
-        hits = [{"searchText": "test", "metrics": [{"metric": "MRR", "value": 0.8}], "documentIds": ["doc1"], "searchConfigurationId": "config1"}]
+        hits = [
+            {
+                "searchText": "test",
+                "metrics": [{"metric": "MRR", "value": 0.8}],
+                "documentIds": ["doc1"],
+                "searchConfigurationId": "config1",
+            }
+        ]
         result = await aggregate_experiment_results(
             _pointwise_experiment(), evaluation_results=_eval_results(hits)
         )
@@ -432,7 +520,14 @@ class TestAggregateExperimentResults:
     @pytest.mark.asyncio
     async def test_pointwise_single_value_stdev_zero(self):
         """Single-query pointwise experiment reports std_dev of 0."""
-        hits = [{"searchText": "test", "metrics": [{"metric": "NDCG@10", "value": 0.8}], "documentIds": ["doc1"], "searchConfigurationId": "config1"}]
+        hits = [
+            {
+                "searchText": "test",
+                "metrics": [{"metric": "NDCG@10", "value": 0.8}],
+                "documentIds": ["doc1"],
+                "searchConfigurationId": "config1",
+            }
+        ]
         result = await aggregate_experiment_results(
             _pointwise_experiment(), evaluation_results=_eval_results(hits)
         )
@@ -447,9 +542,9 @@ class TestAggregateExperimentResults:
                 "searchText": "test",
                 "metrics": [
                     {"metric": "NDCG@10", "value": 0.8},
-                    {"metric": "MRR"},       # missing value
-                    {"value": 0.5},          # missing name
-                    {},                      # empty
+                    {"metric": "MRR"},  # missing value
+                    {"value": 0.5},  # missing name
+                    {},  # empty
                 ],
                 "documentIds": ["doc1"],
                 "searchConfigurationId": "config1",
@@ -489,7 +584,11 @@ class TestAggregateExperimentResults:
         import asyncio
 
         results_data = [
-            {"query_text": "test", "metrics": [{"metric": "jaccard", "value": 0.8}], "snapshots": []}
+            {
+                "query_text": "test",
+                "metrics": [{"metric": "jaccard", "value": 0.8}],
+                "snapshots": [],
+            }
         ]
         exp = _pairwise_experiment(results=results_data)
         results = await asyncio.gather(

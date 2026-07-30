@@ -23,6 +23,9 @@ def test_wrap_puts_result_string_at_output_result():
 
 def test_wrap_is_verbatim_not_reparsed():
     # The envelope carries the reply as-is; it does not parse or reshape it.
-    assert wrap_inference_results("anything")["inference_results"][0]["output"][0][
-        "result"
-    ] == "anything"
+    assert (
+        wrap_inference_results("anything")["inference_results"][0]["output"][0][
+            "result"
+        ]
+        == "anything"
+    )
