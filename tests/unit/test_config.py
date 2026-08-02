@@ -47,7 +47,12 @@ def reset_config_singleton():
 
 
 class TestServerConfigDefaults:
-    def test_default_values(self):
+    def test_default_values(self, monkeypatch):
+
+        monkeypatch.delenv("OPENSEARCH_URL", raising=False)
+        monkeypatch.delenv("PHOENIX_URL", raising=False)
+        monkeypatch.delenv("PHOENIX_PUBLIC_URL", raising=False)
+
         config = ServerConfig()
 
         assert config.server_host == DEFAULT_SERVER_HOST
