@@ -9,5 +9,8 @@ jobs:
     name: DCO 
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        
       - name: Check DCO Signature
-        uses: dcoapp/app-action@f2249767228a6f44d8c7c9ec4188b8e05a8b79f6 # v1
+        uses: KineticCafe/actions-dco@5f160e3ee086af8fc0fb567b8add0937d074123e # v3.2.0
