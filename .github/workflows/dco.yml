@@ -1,0 +1,13 @@
+name: DCO enforcement
+
+on:
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  dco-check:
+    name: DCO 
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check DCO Signature
+        uses: dcoapp/app-action@f2249767228a6f44d8c7c9ec4188b8e05a8b79f6 # v1
