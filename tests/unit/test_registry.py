@@ -112,6 +112,9 @@ def test_duplicate_page_context_does_not_partially_register() -> None:
     # agent-b must not be in the registry, and its first (non-conflicting)
     # context must not have leaked into the map before the conflict was hit.
     assert all(a.name != "agent-b" for a in registry.list_agents())
+    # verify that "fresh-ctx" (the non-conflicting context registered before the conflict was hit) wasn't
+    # written into the page-context 
+    assert registry.get_agent_for_context("fresh-ctx") is None
 
 
 # list_agents()
