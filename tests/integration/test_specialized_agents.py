@@ -33,21 +33,6 @@ def mock_get_emitter() -> Generator[None, None, None]:
         yield
 
 
-@pytest.fixture(autouse=True)
-def reset_mcp_client() -> Generator[None, None, None]:
-    """Reset _mcp_client before and after each test to ensure isolation."""
-    # Save original state
-    original_client = specialized_agents._mcp_client
-
-    # Reset before test
-    specialized_agents._mcp_client = None
-
-    yield
-
-    # Restore original state after test
-    specialized_agents._mcp_client = original_client
-
-
 @pytest.mark.integration
 class TestSetOpenSearchTools:
     """Tests for set_opensearch_tools function."""
@@ -73,14 +58,11 @@ class TestHypothesisAgent:
         # autouse fixture ensures tools are empty
         result = await specialized_agents.hypothesis_agent("test query")
 
-        assert "Error: MCPClient not configured" in result
+        assert "Error: MCP tools not configured" in result
 
     @pytest.mark.asyncio
-    async def test_hypothesis_agent_success(self):
+    async def test_hypothesis_agent_success(self, configured_specialized_agents):
         """Test that hypothesis_agent creates agent and invokes successfully."""
-        # Set tools
-        specialized_agents._mcp_client = MagicMock()
-
         mock_agent = MagicMock()
         mock_agent.invoke_async = AsyncMock(return_value="Test hypothesis response")
 
@@ -91,10 +73,10 @@ class TestHypothesisAgent:
             mock_agent.invoke_async.assert_called_once_with("test query")
 
     @pytest.mark.asyncio
-    async def test_hypothesis_agent_rate_limit_error(self):
+    async def test_hypothesis_agent_rate_limit_error(
+        self, configured_specialized_agents
+    ):
         """Test that hypothesis_agent handles rate limit errors."""
-        specialized_agents._mcp_client = MagicMock()
-
         mock_agent = MagicMock()
         mock_agent.invoke_async = AsyncMock(
             side_effect=Exception("Rate limit exceeded")
@@ -106,11 +88,9 @@ class TestHypothesisAgent:
             assert "Rate limit" in result or "429" in result
 
     @pytest.mark.asyncio
-    async def test_hypothesis_agent_general_error(self):
+    async def test_hypothesis_agent_general_error(self, configured_specialized_agents):
         """Test that hypothesis_agent handles general errors."""
         from agents.art import specialized_agents
-
-        specialized_agents._mcp_client = MagicMock()
 
         mock_agent = MagicMock()
         mock_agent.invoke_async = AsyncMock(side_effect=Exception("General error"))
@@ -134,14 +114,12 @@ class TestEvaluationAgent:
         # autouse fixture ensures tools are empty
         result = await specialized_agents.evaluation_agent("test query")
 
-        assert "Error: MCPClient not configured" in result
+        assert "Error: MCP tools not configured" in result
 
     @pytest.mark.asyncio
-    async def test_evaluation_agent_success(self):
+    async def test_evaluation_agent_success(self, configured_specialized_agents):
         """Test that evaluation_agent creates agent and invokes successfully."""
         from agents.art import specialized_agents
-
-        specialized_agents._mcp_client = MagicMock()
 
         mock_agent = MagicMock()
         mock_agent.invoke_async = AsyncMock(return_value="Test evaluation response")
@@ -153,11 +131,11 @@ class TestEvaluationAgent:
             mock_agent.invoke_async.assert_called_once_with("test query")
 
     @pytest.mark.asyncio
-    async def test_evaluation_agent_rate_limit_error(self):
+    async def test_evaluation_agent_rate_limit_error(
+        self, configured_specialized_agents
+    ):
         """Test that evaluation_agent handles rate limit errors."""
         from agents.art import specialized_agents
-
-        specialized_agents._mcp_client = MagicMock()
 
         mock_agent = MagicMock()
         mock_agent.invoke_async = AsyncMock(
@@ -170,11 +148,9 @@ class TestEvaluationAgent:
             assert "Rate limit" in result or "429" in result
 
     @pytest.mark.asyncio
-    async def test_evaluation_agent_general_error(self):
+    async def test_evaluation_agent_general_error(self, configured_specialized_agents):
         """Test that evaluation_agent handles general errors (non-rate-limit)."""
         from agents.art import specialized_agents
-
-        specialized_agents._mcp_client = MagicMock()
 
         mock_agent = MagicMock()
         mock_agent.invoke_async = AsyncMock(side_effect=Exception("General error"))
@@ -198,14 +174,14 @@ class TestUserBehaviorAnalysisAgent:
         # autouse fixture ensures tools are empty
         result = await specialized_agents.user_behavior_analysis_agent("test query")
 
-        assert "Error: MCPClient not configured" in result
+        assert "Error: MCP tools not configured" in result
 
     @pytest.mark.asyncio
-    async def test_user_behavior_analysis_agent_success(self):
+    async def test_user_behavior_analysis_agent_success(
+        self, configured_specialized_agents
+    ):
         """Test that user_behavior_analysis_agent creates agent and invokes successfully."""
         from agents.art import specialized_agents
-
-        specialized_agents._mcp_client = MagicMock()
 
         mock_agent = MagicMock()
         mock_agent.invoke_async = AsyncMock(return_value="Test UBI analysis response")
@@ -217,11 +193,11 @@ class TestUserBehaviorAnalysisAgent:
             mock_agent.invoke_async.assert_called_once_with("test query")
 
     @pytest.mark.asyncio
-    async def test_user_behavior_analysis_agent_error_handling(self):
+    async def test_user_behavior_analysis_agent_error_handling(
+        self, configured_specialized_agents
+    ):
         """Test that user_behavior_analysis_agent handles errors."""
         from agents.art import specialized_agents
-
-        specialized_agents._mcp_client = MagicMock()
 
         mock_agent = MagicMock()
         mock_agent.invoke_async = AsyncMock(side_effect=Exception("Test error"))
@@ -233,11 +209,11 @@ class TestUserBehaviorAnalysisAgent:
             assert "Test error" in result
 
     @pytest.mark.asyncio
-    async def test_user_behavior_analysis_agent_rate_limit_error(self):
+    async def test_user_behavior_analysis_agent_rate_limit_error(
+        self, configured_specialized_agents
+    ):
         """Test that user_behavior_analysis_agent handles rate limit errors."""
         from agents.art import specialized_agents
-
-        specialized_agents._mcp_client = MagicMock()
 
         mock_agent = MagicMock()
         mock_agent.invoke_async = AsyncMock(
@@ -255,11 +231,9 @@ class TestSpecializedAgentsErrorHandling:
     """Additional error handling tests for specialized agents."""
 
     @pytest.mark.asyncio
-    async def test_hypothesis_agent_tool_failure(self):
+    async def test_hypothesis_agent_tool_failure(self, configured_specialized_agents):
         """Test hypothesis agent when tool call fails during execution."""
         from agents.art import specialized_agents
-
-        specialized_agents._mcp_client = MagicMock()
 
         mock_agent = MagicMock()
         # Simulate tool failure during agent invocation
@@ -280,12 +254,10 @@ class TestSpecializedAgentsErrorHandling:
             mock_agent.invoke_async.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_evaluation_agent_timeout(self):
+    async def test_evaluation_agent_timeout(self, configured_specialized_agents):
         """Test evaluation agent timeout handling."""
 
         from agents.art import specialized_agents
-
-        specialized_agents._mcp_client = MagicMock()
 
         mock_agent = MagicMock()
         # Simulate timeout during agent invocation
@@ -304,11 +276,11 @@ class TestSpecializedAgentsErrorHandling:
             mock_agent.invoke_async.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_user_behavior_agent_missing_data(self):
+    async def test_user_behavior_agent_missing_data(
+        self, configured_specialized_agents
+    ):
         """Test user behavior agent with missing UBI data."""
         from agents.art import specialized_agents
-
-        specialized_agents._mcp_client = MagicMock()
 
         mock_agent = MagicMock()
         # Simulate missing data scenario - agent should handle this gracefully
@@ -328,11 +300,11 @@ class TestSpecializedAgentsErrorHandling:
             assert "UBI" in result or "data" in result.lower()
 
     @pytest.mark.asyncio
-    async def test_user_behavior_agent_tool_error_missing_data(self):
+    async def test_user_behavior_agent_tool_error_missing_data(
+        self, configured_specialized_agents
+    ):
         """Test user behavior agent when UBI tools fail due to missing data."""
         from agents.art import specialized_agents
-
-        specialized_agents._mcp_client = MagicMock()
 
         mock_agent = MagicMock()
         # Simulate tool error when data is missing
@@ -360,12 +332,12 @@ class TestSpecializedAgentsErrorHandling:
         # Test all agents without tools - should initialize with available tools, log warnings
         # Hypothesis agent
         result = await specialized_agents.hypothesis_agent("test query")
-        assert "Error: MCPClient not configured" in result
+        assert "Error: MCP tools not configured" in result
 
         # Evaluation agent
         result = await specialized_agents.evaluation_agent("test query")
-        assert "Error: MCPClient not configured" in result
+        assert "Error: MCP tools not configured" in result
 
         # User behavior agent
         result = await specialized_agents.user_behavior_analysis_agent("test query")
-        assert "Error: MCPClient not configured" in result
+        assert "Error: MCP tools not configured" in result

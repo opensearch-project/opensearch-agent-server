@@ -9,7 +9,8 @@ Pytest configuration and shared fixtures for opensearch-agent-server tests.
 """
 
 import os
-from collections.abc import Callable
+from collections.abc import Callable, Generator
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -53,3 +54,30 @@ def patch_env(monkeypatch: pytest.MonkeyPatch) -> Callable[..., dict[str, str]]:
 def test_opensearch_url() -> str:
     """Returns the test OpenSearch URL (TEST_OPENSEARCH_URL env var, default localhost:9200)."""
     return os.getenv("TEST_OPENSEARCH_URL", "http://localhost:9200")
+
+
+# ---------------------------------------------------------------------------
+# MCP & Specialized Agents Fixtures
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def mock_mcp_client() -> MagicMock:
+    """Return a mock MCPClient configured with resolved tools."""
+    client = MagicMock()
+    client.list_tools_sync.return_value = [MagicMock()]
+    return client
+
+
+@pytest.fixture
+def configured_specialized_agents(
+    mock_mcp_client: MagicMock,
+) -> Generator[MagicMock, None, None]:
+    """Configure specialized_agents with a mock MCPClient and clean up on teardown."""
+    from agents.art import specialized_agents
+
+    specialized_agents.set_mcp_client(mock_mcp_client)
+    yield mock_mcp_client
+
+    specialized_agents._mcp_client = None
+    specialized_agents._mcp_tools = None
