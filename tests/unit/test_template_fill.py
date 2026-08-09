@@ -31,7 +31,9 @@ PRODUCT_SCHEMA = {
 
 RENDERED_DSL = {
     "size": 5,
-    "query": {"bool": {"must": [{"multi_match": {"query": "shoes", "fields": ["title"]}}]}},
+    "query": {
+        "bool": {"must": [{"multi_match": {"query": "shoes", "fields": ["title"]}}]}
+    },
 }
 
 
@@ -71,7 +73,9 @@ class _StubRenderClient:
     def __init__(self, *, template_output=RENDERED_DSL, render_exc=None, mapping=None):
         self._template_output = template_output
         self._render_exc = render_exc
-        self._mapping = mapping if mapping is not None else {"products": {"mappings": {}}}
+        self._mapping = (
+            mapping if mapping is not None else {"products": {"mappings": {}}}
+        )
         self.render_calls = []
         self.mapping_calls = []
 
@@ -99,7 +103,8 @@ def _make_request(client, *, template_id="product_search", mapping="", model=Non
         question="5 cheapest red shoes under $100",
         index_name="products",
         mapping=mapping,
-        context={"index_name": "products", "template_id": template_id} if template_id
+        context={"index_name": "products", "template_id": template_id}
+        if template_id
         else {"index_name": "products"},
         model=model or object(),
         client=client,
@@ -134,7 +139,17 @@ def test_happy_path_fills_renders_and_unwraps(monkeypatch):
     assert out == RENDERED_DSL
     # Rendered by template_id with only the filled (non-None) params.
     assert client.render_calls == [
-        ("product_search", {"params": {"lex_query": "shoes", "size": 5, "color": "red", "price_max": 100.0}})
+        (
+            "product_search",
+            {
+                "params": {
+                    "lex_query": "shoes",
+                    "size": 5,
+                    "color": "red",
+                    "price_max": 100.0,
+                }
+            },
+        )
     ]
     assert cache.calls == ["product_search"]
 
@@ -144,7 +159,9 @@ def test_cannot_express_routes_to_fallback(monkeypatch):
     # field must never reach the renderer.
     fb = _StubFallback()
     client = _StubRenderClient()
-    strat = TemplateFillStrategy(fallback=fb, schema_cache=_StubSchemaCache(schema=_product_schema_obj()))
+    strat = TemplateFillStrategy(
+        fallback=fb, schema_cache=_StubSchemaCache(schema=_product_schema_obj())
+    )
     filled = _product_schema_obj().fill_model.model_validate(
         {"lex_query": "x", "cannot_express": True}
     )
@@ -160,7 +177,9 @@ def test_cannot_express_routes_to_fallback(monkeypatch):
 def test_cannot_express_false_renders_normally(monkeypatch):
     # abstain=False is the happy path: the synthetic field is stripped, render proceeds.
     client = _StubRenderClient()
-    strat = TemplateFillStrategy(schema_cache=_StubSchemaCache(schema=_product_schema_obj()))
+    strat = TemplateFillStrategy(
+        schema_cache=_StubSchemaCache(schema=_product_schema_obj())
+    )
     filled = _product_schema_obj().fill_model.model_validate(
         {"lex_query": "shoes", "cannot_express": False}
     )
@@ -170,13 +189,17 @@ def test_cannot_express_false_renders_normally(monkeypatch):
 
     assert out == RENDERED_DSL
     # cannot_express is stripped before the params reach the renderer.
-    assert client.render_calls == [("product_search", {"params": {"lex_query": "shoes"}})]
+    assert client.render_calls == [
+        ("product_search", {"params": {"lex_query": "shoes"}})
+    ]
 
 
 def test_render_output_string_is_parsed(monkeypatch):
     # Some client versions return template_output as a JSON string.
     client = _StubRenderClient(template_output=json.dumps(RENDERED_DSL))
-    strat = TemplateFillStrategy(schema_cache=_StubSchemaCache(schema=_product_schema_obj()))
+    strat = TemplateFillStrategy(
+        schema_cache=_StubSchemaCache(schema=_product_schema_obj())
+    )
     filled = _product_schema_obj().fill_model.model_validate({"lex_query": "shoes"})
     monkeypatch.setattr(tf_module, "forced_tool_fill", lambda **kw: filled)
 
@@ -208,7 +231,9 @@ def test_unregistered_template_falls_back():
 
 def test_fill_failure_falls_back(monkeypatch):
     fb = _StubFallback()
-    strat = TemplateFillStrategy(fallback=fb, schema_cache=_StubSchemaCache(schema=_product_schema_obj()))
+    strat = TemplateFillStrategy(
+        fallback=fb, schema_cache=_StubSchemaCache(schema=_product_schema_obj())
+    )
 
     def _boom(**kw):
         raise ValueError("forced tool input failed validation")
@@ -222,7 +247,9 @@ def test_fill_failure_falls_back(monkeypatch):
 def test_render_failure_falls_back(monkeypatch):
     fb = _StubFallback()
     client = _StubRenderClient(render_exc=RuntimeError("bad Mustache"))
-    strat = TemplateFillStrategy(fallback=fb, schema_cache=_StubSchemaCache(schema=_product_schema_obj()))
+    strat = TemplateFillStrategy(
+        fallback=fb, schema_cache=_StubSchemaCache(schema=_product_schema_obj())
+    )
     filled = _product_schema_obj().fill_model.model_validate({"lex_query": "shoes"})
     monkeypatch.setattr(tf_module, "forced_tool_fill", lambda **kw: filled)
 
@@ -236,7 +263,9 @@ def test_missing_template_output_falls_back(monkeypatch):
     client = _StubRenderClient(template_output=None)  # -> render returns no output
     # override render to return an empty dict (no template_output key)
     client.render_search_template = lambda id, body: {}  # noqa: A002
-    strat = TemplateFillStrategy(fallback=fb, schema_cache=_StubSchemaCache(schema=_product_schema_obj()))
+    strat = TemplateFillStrategy(
+        fallback=fb, schema_cache=_StubSchemaCache(schema=_product_schema_obj())
+    )
     filled = _product_schema_obj().fill_model.model_validate({"lex_query": "shoes"})
     monkeypatch.setattr(tf_module, "forced_tool_fill", lambda **kw: filled)
 
@@ -278,14 +307,18 @@ def test_agent_auto_selects_template_fill_on_template_id(monkeypatch):
     """template_id present -> the agent routes to template_fill and skips mapping."""
     monkeypatch.setattr(agent_module, "create_model", lambda: object())
     strat = _AgentStubStrategy()
-    monkeypatch.setattr(agent_module, "STRATEGIES", {"template_fill": strat, "direct_dsl": object()})
+    monkeypatch.setattr(
+        agent_module, "STRATEGIES", {"template_fill": strat, "direct_dsl": object()}
+    )
     monkeypatch.setattr(agent_module, "DEFAULT_STRATEGY", "direct_dsl")
 
     a = AgenticSearchAgent("http://localhost:9200")
     client = _StubRenderClient()
     monkeypatch.setattr(a, "_client", lambda auth_token: client)
 
-    out = a("red shoes", context={"index_name": "products", "template_id": "product_search"})
+    out = a(
+        "red shoes", context={"index_name": "products", "template_id": "product_search"}
+    )
 
     assert json.loads(out) == {"query": {"term": {"color": "red"}}}
     assert len(strat.calls) == 1

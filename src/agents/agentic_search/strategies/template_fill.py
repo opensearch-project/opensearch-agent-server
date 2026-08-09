@@ -77,14 +77,18 @@ class TemplateFillStrategy:
         # Free-DSL fallback (G0). Defaults to the standard direct-DSL generator; a
         # benchmark harness may inject a forced variant instead.
         self._fallback = fallback if fallback is not None else DirectDslStrategy()
-        self._schema_cache = schema_cache if schema_cache is not None else TemplateSchemaCache()
+        self._schema_cache = (
+            schema_cache if schema_cache is not None else TemplateSchemaCache()
+        )
 
     def generate(self, request: GenerationRequest) -> dict[str, Any]:
         template_id = request.context.get(TEMPLATE_ID_KEY)
         if not template_id:
             # template_fill was selected without a template_id — nothing to fill.
             # Degrade rather than raise so the request still returns results.
-            logger.warning("template_fill selected but no template_id in context; falling back")
+            logger.warning(
+                "template_fill selected but no template_id in context; falling back"
+            )
             return self._fallback_generate(request)
 
         try:
@@ -105,7 +109,9 @@ class TemplateFillStrategy:
             )
             return self._fallback_generate(request)
 
-    def _fill_and_render(self, request: GenerationRequest, template_id: str) -> dict[str, Any]:
+    def _fill_and_render(
+        self, request: GenerationRequest, template_id: str
+    ) -> dict[str, Any]:
         """The happy path: fill the template's params and render them into DSL.
 
         Raises on any failure so :meth:`generate` can degrade to the fallback.
@@ -141,7 +147,9 @@ class TemplateFillStrategy:
         return rendered
 
     @staticmethod
-    def _render(client: Any, template_id: str, params: dict[str, Any]) -> dict[str, Any]:
+    def _render(
+        client: Any, template_id: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
         """Render the stored body via ``POST _render/template`` and unwrap the DSL.
 
         OpenSearch's own Mustache engine renders (and safety-checks) the query, so
@@ -174,10 +182,14 @@ class TemplateFillStrategy:
         req = request
         if not request.mapping:
             try:
-                mapping = json.dumps(request.client.indices.get_mapping(index=request.index_name))
+                mapping = json.dumps(
+                    request.client.indices.get_mapping(index=request.index_name)
+                )
                 req = replace(request, mapping=mapping)
             except Exception as e:  # noqa: BLE001 - let the fallback try with what it has
                 logger.warning(
-                    "Fallback mapping fetch failed for index=%s (%s)", request.index_name, e
+                    "Fallback mapping fetch failed for index=%s (%s)",
+                    request.index_name,
+                    e,
                 )
         return self._fallback.generate(req)

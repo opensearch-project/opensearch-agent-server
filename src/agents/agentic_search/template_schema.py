@@ -142,7 +142,9 @@ def _safe_field_name(param_name: str, used: set[str]) -> str:
     return candidate
 
 
-def build_fill_model(param_schema: dict[str, Any], *, model_name: str = FILL_MODEL_NAME) -> type:
+def build_fill_model(
+    param_schema: dict[str, Any], *, model_name: str = FILL_MODEL_NAME
+) -> type:
     """Build a Pydantic model whose fields are the template's params, 1:1.
 
     Each param entry is ``{type, required?, enum?, description?}``. Required params
@@ -184,7 +186,10 @@ def build_fill_model(param_schema: dict[str, Any], *, model_name: str = FILL_MOD
         description = spec.get("description", "")
         field_name = _safe_field_name(name, used_names)
         if spec.get("required", False):
-            fields[field_name] = (annotation, Field(description=description, alias=name))
+            fields[field_name] = (
+                annotation,
+                Field(description=description, alias=name),
+            )
         else:
             # Optional: nullable + default None -> omitted from the tool's
             # `required` and safely absent when the model doesn't fill it.
