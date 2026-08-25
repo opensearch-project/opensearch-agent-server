@@ -44,15 +44,17 @@ jobs:
           uv sync --all-extras
         shell: pwsh
 
-      - name: Run unit tests (Linux/macOS)
+      - name: Run unit tests with coverage (Linux/macOS)
         if: runner.os != 'Windows'
         run: |
           source .venv/bin/activate
-          python -m pytest tests/unit/ -v --tb=short
+          python -m pytest tests/unit/ -v --tb=short \
+            --cov=src --cov-report=term-missing --cov-report=xml \
+            --cov-fail-under=90
 
-      - name: Run unit tests (Windows)
+      - name: Run unit tests with coverage (Windows)
         if: runner.os == 'Windows'
         run: |
           .venv\Scripts\activate
-          python -m pytest tests/unit/ -v --tb=short
+          python -m pytest tests/unit/ -v --tb=short --cov=src --cov-report=term-missing --cov-report=xml --cov-fail-under=90
         shell: pwsh
