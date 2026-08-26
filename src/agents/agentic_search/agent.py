@@ -115,7 +115,9 @@ class AgenticSearchAgent:
         """
         strategy_name = context.get("strategy")
         if strategy_name is None:
-            strategy_name = "template_fill" if context.get("template_id") else DEFAULT_STRATEGY
+            strategy_name = (
+                "template_fill" if context.get("template_id") else DEFAULT_STRATEGY
+            )
         strategy: GenerationStrategy | None = STRATEGIES.get(strategy_name)
         if strategy is None:
             raise ValueError(f"unknown strategy '{strategy_name}'")

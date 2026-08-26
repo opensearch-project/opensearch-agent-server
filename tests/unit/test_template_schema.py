@@ -21,12 +21,20 @@ pytestmark = pytest.mark.unit
 
 # The worked-example schema from the design doc (§4.3).
 PRODUCT_SCHEMA = {
-    "lex_query": {"type": "string", "required": True, "description": "content words only"},
+    "lex_query": {
+        "type": "string",
+        "required": True,
+        "description": "content words only",
+    },
     "size": {"type": "integer", "required": False},
     "color": {"type": "string", "required": False},
     "brand": {"type": "string", "required": False},
     "price_max": {"type": "float", "required": False},
-    "sort_by": {"type": "string", "enum": ["price", "rating", "created_at"], "required": False},
+    "sort_by": {
+        "type": "string",
+        "enum": ["price", "rating", "created_at"],
+        "required": False,
+    },
     "sort_order": {"type": "string", "enum": ["asc", "desc"], "required": False},
 }
 
@@ -186,7 +194,9 @@ def test_build_model_real_param_named_cannot_express_wins():
 
 
 def test_cache_fetches_and_builds():
-    client = _StubClient(doc={"param_schema": PRODUCT_SCHEMA, "index_binding": "products"})
+    client = _StubClient(
+        doc={"param_schema": PRODUCT_SCHEMA, "index_binding": "products"}
+    )
     cache = TemplateSchemaCache()
     schema = cache.get("product_search", client)
     assert schema.template_id == "product_search"

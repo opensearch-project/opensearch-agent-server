@@ -29,6 +29,7 @@ FILL_SYSTEM_PROMPT = (
     "path."
 )
 
+
 def build_fill_system_blocks(system_prompt: str) -> list[SystemContentBlock]:
     """Wrap a system-prompt string in the standard content blocks + cache point.
 
@@ -46,7 +47,9 @@ def build_fill_system_blocks(system_prompt: str) -> list[SystemContentBlock]:
 # SYSTEM_BLOCKS. The fill prompt is small, so caching is a minor lever here (a short
 # prefix on a fast model may fall under the per-checkpoint token floor); the point
 # is harmless and keeps the two paths symmetric.
-FILL_SYSTEM_BLOCKS: list[SystemContentBlock] = build_fill_system_blocks(FILL_SYSTEM_PROMPT)
+FILL_SYSTEM_BLOCKS: list[SystemContentBlock] = build_fill_system_blocks(
+    FILL_SYSTEM_PROMPT
+)
 
 FILL_USER_PROMPT = """\
 Question: {question}
