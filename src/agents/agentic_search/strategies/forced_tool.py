@@ -24,6 +24,7 @@ Upstream: https://github.com/strands-agents/harness-sdk/issues/3336
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
@@ -42,6 +43,91 @@ def supports_forced_tool(model: Any) -> bool:
     """
     client = getattr(model, "client", None)
     return client is not None and hasattr(client, "converse_stream")
+
+
+def _forced_tool_input_json(
+    *,
+    model: Any,
+    tool_spec: dict[str, Any],
+    system_blocks: list[dict],
+    user_message: str,
+) -> str:
+    """Force one tool call for ``tool_spec`` and return its accumulated input JSON.
+
+    The shared engine behind both public entry points: builds the ``converse_stream``
+    request with ``toolChoice`` pinned to this tool, streams the reply, and concatenates
+    the tool-use input fragments. Returns the raw JSON *text* rather than a decoded
+    object so each caller keeps its own decode semantics — the model form validates
+    against a Pydantic model, the raw form parses to a dict.
+
+    Raises:
+        ValueError: The forced tool produced no input.
+    """
+    tool_name = tool_spec["name"]
+    converse_kwargs: dict[str, Any] = {
+        "modelId": model.config.get("model_id"),
+        "system": [dict(b) for b in system_blocks],
+        "messages": [{"role": "user", "content": [{"text": user_message}]}],
+        "toolConfig": {
+            "tools": [
+                {
+                    "toolSpec": {
+                        "name": tool_name,
+                        "description": tool_spec.get("description", "Emit the result."),
+                        "inputSchema": tool_spec["inputSchema"],
+                    }
+                }
+            ],
+            "toolChoice": {"tool": {"name": tool_name}},
+        },
+    }
+    # Driving converse_stream directly bypasses the strands request builder, so
+    # apply the model's configured temperature here if one is set.
+    temperature = model.config.get("temperature")
+    if temperature is not None:
+        converse_kwargs["inferenceConfig"] = {"temperature": temperature}
+
+    resp = model.client.converse_stream(**converse_kwargs)
+
+    # Accumulate the forced tool's input JSON from the stream.
+    tool_input = ""
+    for event in resp["stream"]:
+        tool_use = event.get("contentBlockDelta", {}).get("delta", {}).get("toolUse")
+        if tool_use and "input" in tool_use:
+            tool_input += tool_use["input"]
+
+    if not tool_input.strip():
+        raise ValueError("forced tool call produced no input")
+    return tool_input
+
+
+def forced_tool_fill_raw(
+    *,
+    model: Any,
+    tool_spec: dict[str, Any],
+    system_blocks: list[dict],
+    user_message: str,
+) -> dict[str, Any]:
+    """Force one tool call for a hand-built ``tool_spec`` and return its raw input.
+
+    The Pydantic-model form (:func:`forced_tool_fill`) covers the case where the tool's
+    shape is a model. Some tools are assembled at request time from several sources — a
+    merged multi-template schema, for example — and are validated per-branch afterwards
+    rather than against one model, so this returns the decoded tool input as a dict.
+
+    Raises:
+        ValueError: The forced tool produced no input, or the input was not a JSON object.
+    """
+    tool_input = _forced_tool_input_json(
+        model=model,
+        tool_spec=tool_spec,
+        system_blocks=system_blocks,
+        user_message=user_message,
+    )
+    parsed = json.loads(tool_input)
+    if not isinstance(parsed, dict):
+        raise ValueError("forced tool input is not a JSON object")
+    return parsed
 
 
 def forced_tool_fill(
@@ -78,43 +164,12 @@ def forced_tool_fill(
         if tool_spec is not None
         else convert_pydantic_to_tool_spec(schema_model)
     )
-    tool_name = spec["name"]
-
-    client = model.client  # botocore bedrock-runtime client (pooled connection)
-    converse_kwargs: dict[str, Any] = {
-        "modelId": model.config.get("model_id"),
-        "system": [dict(b) for b in system_blocks],
-        "messages": [{"role": "user", "content": [{"text": user_message}]}],
-        "toolConfig": {
-            "tools": [
-                {
-                    "toolSpec": {
-                        "name": tool_name,
-                        "description": spec.get("description", "Emit the result."),
-                        "inputSchema": spec["inputSchema"],
-                    }
-                }
-            ],
-            "toolChoice": {"tool": {"name": tool_name}},
-        },
-    }
-    # Driving converse_stream directly bypasses the strands request builder, so
-    # apply the model's configured temperature here if one is set.
-    temperature = model.config.get("temperature")
-    if temperature is not None:
-        converse_kwargs["inferenceConfig"] = {"temperature": temperature}
-
-    resp = client.converse_stream(**converse_kwargs)
-
-    # Accumulate the forced tool's input JSON from the stream.
-    tool_input = ""
-    for event in resp["stream"]:
-        tool_use = event.get("contentBlockDelta", {}).get("delta", {}).get("toolUse")
-        if tool_use and "input" in tool_use:
-            tool_input += tool_use["input"]
-
-    if not tool_input.strip():
-        raise ValueError("forced tool call produced no input")
+    tool_input = _forced_tool_input_json(
+        model=model,
+        tool_spec=spec,
+        system_blocks=system_blocks,
+        user_message=user_message,
+    )
     try:
         return schema_model.model_validate_json(tool_input)
     except ValidationError as e:

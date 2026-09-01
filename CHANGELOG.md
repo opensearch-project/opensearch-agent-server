@@ -10,6 +10,7 @@
 - `agentic_search` agent (natural-language query -> OpenSearch DSL) reachable via `POST /invoke`, with a per-request generation strategy (`context.strategy`, default `direct_dsl`) and example ml-commons connector/FLOW-agent wiring
 - `/invoke` `context` (structured input forwarded to the agent) and `response_format` (opt-in ml-commons `inference_results` envelope) request fields
 - `template_fill` generation strategy for `agentic_search`: fills a registered search template's Mustache parameters and renders them via `_render/template`, selected by passing `context.template_id`
+- `multi_template_fill` generation strategy for `agentic_search`: pass several candidate templates as `context.template_ids` and one forced tool call both chooses a template and fills its parameters. Candidates are filtered to the request's index and capped; a request naming only one template still uses `template_fill`
 
 ### Changed
 - Drop the `reason` field from the `agentic_search` free-DSL output. It was decoded on every request and only logged, never used to build the query; removing it cuts free-DSL generation latency substantially with no accuracy change

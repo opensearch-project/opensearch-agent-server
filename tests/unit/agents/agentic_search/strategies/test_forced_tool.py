@@ -19,6 +19,7 @@ from pydantic import BaseModel
 
 from agents.agentic_search.strategies.forced_tool import (
     forced_tool_fill,
+    forced_tool_fill_raw,
     supports_forced_tool,
 )
 
@@ -118,4 +119,56 @@ class TestForcedToolFill:
                 schema_model=_Result,
                 system_blocks=[],
                 user_message="x",
+            )
+
+
+class TestForcedToolFillRaw:
+    """The hand-built-spec form: same forced call, but the input stays a raw dict."""
+
+    _SPEC = {
+        "name": "SelectAndFill",
+        "description": "Choose and fill.",
+        "inputSchema": {"json": {"type": "object", "properties": {}}},
+    }
+
+    def test_returns_decoded_dict_and_forces_the_named_tool(self):
+        model = _make_model(
+            config={"model_id": "m", "temperature": 0},
+            stream_events=_stream_events(['{"template_id":', '"t1"}']),
+        )
+
+        out = forced_tool_fill_raw(
+            model=model,
+            tool_spec=self._SPEC,
+            system_blocks=[{"text": "sys"}],
+            user_message="q",
+        )
+
+        assert out == {"template_id": "t1"}
+        sent = model.client.converse_stream.call_args[1]
+        assert sent["toolConfig"]["toolChoice"] == {"tool": {"name": "SelectAndFill"}}
+        assert sent["inferenceConfig"] == {"temperature": 0}
+
+    def test_empty_input_raises(self):
+        model = _make_model(
+            config={"model_id": "m"}, stream_events=_stream_events(["   "])
+        )
+        with pytest.raises(ValueError, match="produced no input"):
+            forced_tool_fill_raw(
+                model=model,
+                tool_spec=self._SPEC,
+                system_blocks=[],
+                user_message="q",
+            )
+
+    def test_non_object_input_raises(self):
+        model = _make_model(
+            config={"model_id": "m"}, stream_events=_stream_events(["[1, 2]"])
+        )
+        with pytest.raises(ValueError, match="not a JSON object"):
+            forced_tool_fill_raw(
+                model=model,
+                tool_spec=self._SPEC,
+                system_blocks=[],
+                user_message="q",
             )

@@ -9,7 +9,8 @@
 The OpenSearch client and the generation strategy are stubbed, so nothing hits a
 cluster or an LLM. Covers: strategy dispatch and mapping/token plumbing, the
 guard paths (bad query / missing index / unknown strategy / non-dict result),
-and that every failure degrades to FALLBACK_DSL.
+the implicit template routing gate, and that every failure degrades to
+FALLBACK_DSL.
 """
 
 from __future__ import annotations
@@ -19,8 +20,9 @@ import json
 import pytest
 
 from agents.agentic_search import agent as agent_module
-from agents.agentic_search.agent import AgenticSearchAgent
+from agents.agentic_search.agent import AgenticSearchAgent, _template_strategy_for
 from agents.agentic_search.prompts import FALLBACK_DSL
+from agents.agentic_search.strategies.template_base import distinct_template_ids
 
 pytestmark = pytest.mark.unit
 
@@ -145,3 +147,29 @@ def test_non_object_strategy_result_falls_back(make_agent):
     # A strategy must return a _search body object; anything else degrades.
     a, strat = make_agent(strategy=_StubStrategy(returns=["not", "an", "object"]))
     assert a("red shoes", context={"index_name": "products"}) == FALLBACK_DSL
+
+
+@pytest.mark.parametrize(
+    "context,expected",
+    [
+        ({}, None),
+        ({"template_id": "t1"}, "template_fill"),
+        ({"template_ids": ["t1"]}, "template_fill"),
+        ({"template_ids": "t1"}, "template_fill"),
+        # Duplicates are not a real choice.
+        ({"template_ids": ["t1", "t1"]}, "template_fill"),
+        ({"template_ids": ["t1"], "template_id": "t1"}, "template_fill"),
+        ({"template_ids": ["t1", "t2"]}, "multi_template_fill"),
+        ({"template_ids": ["t1"], "template_id": "t2"}, "multi_template_fill"),
+        ({"template_ids": []}, None),
+        ({"template_ids": None}, None),
+    ],
+)
+def test_gate_routes_on_distinct_candidate_count(context, expected):
+    assert _template_strategy_for(context) == expected
+
+
+def test_distinct_ids_preserve_order_and_dedupe():
+    assert distinct_template_ids(
+        {"template_ids": ["b", "a", "b"], "template_id": "a"}
+    ) == ["b", "a"]
