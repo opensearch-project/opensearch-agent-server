@@ -161,3 +161,67 @@ class TestLoggingAgentSkills:
         call_args = mock_agent.state.set.call_args
         assert call_args.args[0] == "agent_skills"
         assert call_args.args[1] == {"activated_skills": ["my-skill"]}
+
+
+@pytest.mark.usefixtures("patch_mcp")
+class TestDefaultAgentAgUiStrandsRebuild:
+    """Group 4 — ag_ui_strands per-thread rebuild and context management (#166)."""
+
+    def test_rebuilt_per_thread_agent_has_context_management_and_skills(self) -> None:
+        """ag_ui_strands rebuilds per-thread agent without duplicate plugin registration."""
+        from ag_ui_strands import StrandsAgent as AGUIStrandsAgent
+        from strands import Agent
+        from strands.agent.conversation_manager import SummarizingConversationManager
+
+        from server.agent_orchestrator import _ContextManagedThreadAgents
+
+        skills = [Skill(name="test-skill", description="a test skill")]
+        template = create_default_agent("http://localhost:9200", skills=skills)
+
+        wrapper = AGUIStrandsAgent(agent=template, name="default")
+        wrapper._agents_by_thread = _ContextManagedThreadAgents(
+            wrapper._agents_by_thread
+        )
+
+        # Simulate ag_ui_strands run() lazy per-thread agent rebuild
+        per_thread_agent = Agent(
+            model=wrapper._model,
+            system_prompt=wrapper._system_prompt,
+            tools=wrapper._tools,
+            **wrapper._agent_kwargs,
+        )
+        wrapper._agents_by_thread["thread-1"] = per_thread_agent
+        rebuilt = wrapper._agents_by_thread["thread-1"]
+
+        assert isinstance(rebuilt.conversation_manager, SummarizingConversationManager)
+        assert "context_offloader" in rebuilt._plugin_registry._plugins
+        assert "agent_skills" in rebuilt._plugin_registry._plugins
+        assert "retrieve_offloaded_content" in rebuilt.tool_registry.registry
+
+    def test_rebuilt_per_thread_agent_without_skills(self) -> None:
+        """When no skills are passed, context management still attaches properly."""
+        from ag_ui_strands import StrandsAgent as AGUIStrandsAgent
+        from strands import Agent
+        from strands.agent.conversation_manager import SummarizingConversationManager
+
+        from server.agent_orchestrator import _ContextManagedThreadAgents
+
+        template = create_default_agent("http://localhost:9200", skills=[])
+
+        wrapper = AGUIStrandsAgent(agent=template, name="default")
+        wrapper._agents_by_thread = _ContextManagedThreadAgents(
+            wrapper._agents_by_thread
+        )
+
+        per_thread_agent = Agent(
+            model=wrapper._model,
+            system_prompt=wrapper._system_prompt,
+            tools=wrapper._tools,
+            **wrapper._agent_kwargs,
+        )
+        wrapper._agents_by_thread["thread-1"] = per_thread_agent
+        rebuilt = wrapper._agents_by_thread["thread-1"]
+
+        assert isinstance(rebuilt.conversation_manager, SummarizingConversationManager)
+        assert "context_offloader" in rebuilt._plugin_registry._plugins
+        assert "agent_skills" not in rebuilt._plugin_registry._plugins

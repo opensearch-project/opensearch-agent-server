@@ -110,8 +110,12 @@ def apply_context_management(agent: Agent) -> None:
     manager = create_conversation_manager()
     agent.conversation_manager = manager
     manager.register_hooks(agent.hooks)  # wire the proactive-compression hook
-    # Registers the offloader's hook + retrieve_offloaded_content tool. The sentinel
-    # above ensures this runs once per agent (a second add would raise on duplicate).
-    agent._plugin_registry.add_and_init(create_context_offloader())
+    # Registers the offloader's hook + retrieve_offloaded_content tool. Guard against
+    # re-registration if the plugin was already registered on this agent.
+    plugin_registry = getattr(agent, "_plugin_registry", None)
+    if plugin_registry is not None:
+        registered_plugins = getattr(plugin_registry, "_plugins", {})
+        if "context_offloader" not in registered_plugins:
+            plugin_registry.add_and_init(create_context_offloader())
 
     setattr(agent, _APPLIED_ATTR, True)

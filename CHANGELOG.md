@@ -16,6 +16,7 @@
 - Drop the `reason` field from the `agentic_search` free-DSL output. It was decoded on every request and only logged, never used to build the query; removing it cuts free-DSL generation latency substantially with no accuracy change
 
 ### Fixed
+- Avoid duplicate context-management plugin registration when rebuilding per-thread default agent (fixes #166)
 - Bundled skills (`ppl-reference`) are now included in the pip wheel — previously only available from git clones
 - Default agent now respects `BEDROCK_INFERENCE_PROFILE_ARN` env var instead of silently falling back to a hardcoded Sonnet 4 model (fixes #94)
 - Tool calls now appear in the correct position in the UI instead of at the end of the preceding text message; upgraded `ag-ui-strands` to 0.1.9 which properly emits `TEXT_MESSAGE_END` before `TOOL_CALL_START` (fixes #75)
