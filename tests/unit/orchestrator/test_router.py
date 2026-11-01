@@ -45,6 +45,17 @@ class TestPageContextRouter:
         agent = router.route(None)
         assert agent.name == "olly"
 
+    def test_falls_back_to_default_when_context_empty(self):
+        router = PageContextRouter(_registry_with_default())
+        agent = router.route("")
+        assert agent.name == "olly"
+
+    def test_context_match_is_case_sensitive(self):
+        # Matching is an exact lookup, so a case variant falls back to the default.
+        router = PageContextRouter(_registry_with_default())
+        agent = router.route("Search-Relevance")
+        assert agent.name == "olly"
+
     def test_raises_when_no_default_and_no_match(self):
         registry = AgentRegistry()
         registry.register(
